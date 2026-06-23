@@ -4,13 +4,14 @@ import { Search, Plus, Filter, Download, ChevronDown } from "lucide-react";
 import { EstadoBadge } from "@/components/estado-badge";
 import { PedidoDetalle } from "@/components/pedido-detalle";
 import {
-  PEDIDOS,
   CONFIRMACION_TONE,
   CONFIRMACION_LABEL,
   type EstadoPedido,
   type Pedido,
 } from "@/lib/demo-data";
+import { usePedidos } from "@/lib/use-pedidos";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_shell/pedidos")({
   component: PedidosPage,
@@ -25,13 +26,14 @@ const ESTADOS: Array<{ value: "todos" | EstadoPedido; label: string }> = [
 ];
 
 function PedidosPage() {
+  const pedidos = usePedidos();
   const [q, setQ] = useState("");
   const [estado, setEstado] = useState<"todos" | EstadoPedido>("todos");
   const [selected, setSelected] = useState<Pedido | null>(null);
   const [open, setOpen] = useState(false);
 
   const filtered = useMemo(() => {
-    return PEDIDOS.filter((p) => {
+    return pedidos.filter((p) => {
       if (estado !== "todos" && p.estado !== estado) return false;
       if (q && !`${p.id} ${p.cliente} ${p.direccion} ${p.producto}`.toLowerCase().includes(q.toLowerCase()))
         return false;
@@ -50,11 +52,14 @@ function PedidosPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {filtered.length} pedidos visibles · {PEDIDOS.length} totales
+            {filtered.length} pedidos visibles · {pedidos.length} totales
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted">
+          <button
+            onClick={() => toast.info("Exportar", { description: "La exportación a Excel estará disponible en la versión con backend." })}
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted"
+          >
             <Download className="h-4 w-4" /> Exportar
           </button>
           <Link
@@ -151,8 +156,18 @@ function PedidosPage() {
         <div className="flex items-center justify-between border-t border-border px-6 py-3 text-xs text-muted-foreground">
           <span>Mostrando 1–{filtered.length} de {filtered.length}</span>
           <div className="flex items-center gap-1">
-            <button className="rounded border border-border px-2 py-1 hover:bg-muted">Anterior</button>
-            <button className="rounded border border-border px-2 py-1 hover:bg-muted">Siguiente</button>
+            <button
+              onClick={() => toast.info("Paginación disponible cuando haya más de 50 pedidos.")}
+              className="rounded border border-border px-2 py-1 hover:bg-muted"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => toast.info("Paginación disponible cuando haya más de 50 pedidos.")}
+              className="rounded border border-border px-2 py-1 hover:bg-muted"
+            >
+              Siguiente
+            </button>
           </div>
         </div>
       </div>

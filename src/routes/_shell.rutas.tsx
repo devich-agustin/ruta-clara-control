@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Share2, Navigation, Phone, Truck, MoreHorizontal } from "lucide-react";
 import { CAMIONES } from "@/lib/demo-data";
 import { EstadoBadge } from "@/components/estado-badge";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_shell/rutas")({
   component: RutasPage,
@@ -19,7 +20,10 @@ function RutasPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Rutas del día</h1>
           <p className="mt-1 text-sm text-muted-foreground">Lunes 22 de junio · {CAMIONES.length} camiones operativos</p>
         </div>
-        <button className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+        <button
+          onClick={() => toast.info("Compartir ruta", { description: `Se enviaría el PDF de la ruta de ${camion.chofer} por WhatsApp.` })}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
           <Share2 className="h-4 w-4" /> Compartir ruta
         </button>
       </div>
@@ -54,7 +58,10 @@ function RutasPage() {
                 <div className="text-sm font-semibold">{camion.id} · {camion.chofer}</div>
                 <div className="text-xs text-muted-foreground">{camion.paradas.length} paradas</div>
               </div>
-              <button className="rounded p-1.5 text-muted-foreground hover:bg-muted">
+              <button
+                onClick={() => toast.info("Opciones de ruta", { description: "Editar paradas, reordenar y exportar disponible en versión completa." })}
+                className="rounded p-1.5 text-muted-foreground hover:bg-muted"
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </div>
@@ -139,7 +146,10 @@ function RutasPage() {
               <div className="font-semibold">{camion.id}</div>
               <div className="text-muted-foreground">Ruta optimizada · 38 km · ~3h 20min</div>
             </div>
-            <button className="absolute right-4 top-4 inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted">
+            <button
+              onClick={() => toast.info("Mapa en tiempo real disponible en Fase 2 de Rutia.")}
+              className="absolute right-4 top-4 inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted"
+            >
               <Navigation className="h-4 w-4" /> Recentrar
             </button>
           </div>

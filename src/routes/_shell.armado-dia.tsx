@@ -37,14 +37,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  PEDIDOS,
-  ARMADO_DIA_INICIAL,
   CONFIRMACION_TONE,
   CONFIRMACION_LABEL,
   type ArmadoColumnId,
   type Pedido,
   type ConfirmacionCliente,
 } from "@/lib/demo-data";
+import { getPedidos, getArmadoInicial } from "@/lib/store";
 
 export const Route = createFileRoute("/_shell/armado-dia")({
   component: ArmadoDiaPage,
@@ -94,15 +93,10 @@ const VEHICLE_CONFIGS: Record<Exclude<ColumnId, "sin_asignar">, VehicleConfig> =
   },
 };
 
-// Pedidos para el armado (fecha 23/06 + pendientes de hoy sin ruta)
-const PEDIDOS_ARMADO = PEDIDOS.filter(
-  (p) => p.estado === "pendiente" && (p.fecha === "23/06/2026" || p.fecha === "22/06/2026")
-);
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function getPedido(id: string): Pedido | undefined {
-  return PEDIDOS_ARMADO.find((p) => p.id === id);
+  return getPedidos().find((p) => p.id === id);
 }
 
 function ConfirmBadge({ estado }: { estado: ConfirmacionCliente }) {
@@ -358,7 +352,7 @@ function TruckColumn({ columnId, ids }: { columnId: Exclude<ColumnId, "sin_asign
 // ── Página principal ──────────────────────────────────────────────────────
 
 function ArmadoDiaPage() {
-  const [columns, setColumns] = useState<Record<ColumnId, string[]>>(ARMADO_DIA_INICIAL);
+  const [columns, setColumns] = useState<Record<ColumnId, string[]>>(getArmadoInicial);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(

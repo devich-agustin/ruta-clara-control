@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TrendingUp, TrendingDown, Download } from "lucide-react";
+import { toast } from "sonner";
 import {
   REPORTES_KPIS,
   MOTIVOS_FALLOS,
@@ -35,7 +36,10 @@ function ReportesPage() {
             Métricas de entrega de los últimos 30 días
           </p>
         </div>
-        <button className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted">
+        <button
+          onClick={() => toast.info("Descargar reporte", { description: "La exportación a PDF/Excel estará disponible con backend conectado." })}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted"
+        >
           <Download className="h-4 w-4" /> Descargar reporte
         </button>
       </div>
