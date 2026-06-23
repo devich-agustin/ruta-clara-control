@@ -49,7 +49,7 @@ interface Entrega {
 
 function buildEntregas(): Entrega[] {
   return ARMADO_DIA_INICIAL.camion_1
-    .map((id) => {
+    .map((id): Entrega | null => {
       const pedido = PEDIDOS.find((p) => p.id === id);
       if (!pedido) return null;
       const detalle = getDetalle(id);
@@ -66,7 +66,7 @@ function buildEntregas(): Entrega[] {
         mapUrl: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
           `${pedido.direccion}, ${pedido.barrio}, Buenos Aires, Argentina`
         )}`,
-        estado: "pendiente" as const,
+        estado: "pendiente",
       };
     })
     .filter((e): e is Entrega => e !== null);
