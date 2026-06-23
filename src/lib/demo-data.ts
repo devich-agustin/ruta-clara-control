@@ -304,6 +304,16 @@ export const INCIDENCIA_LABEL: Record<TipoIncidencia, string> = {
   chofer:          "Reporte de chofer",
 };
 
+export type TipoEventoInc = "apertura" | "actualizacion" | "contacto" | "resolucion" | "nota";
+
+export interface IncidenciaEvento {
+  tipo: TipoEventoInc;
+  texto: string;
+  fecha: string;
+  hora: string;
+  autor?: string;
+}
+
 export interface Incidencia {
   id: string;
   tipo: TipoIncidencia;
@@ -313,15 +323,101 @@ export interface Incidencia {
   prioridad: "alta" | "media" | "baja";
   estado: "abierta" | "en_revision" | "resuelta";
   referencia?: string;
+  pedidoId?: string;
+  cliente?: string;
+  clienteTelefono?: string;
+  chofer?: string;
+  vehiculo?: string;
+  responsable: string;
+  costoEstimado: number;
+  tiempoPerdido: number;
+  reprogramacionRequerida: boolean;
+  historial: IncidenciaEvento[];
 }
 
 export const INCIDENCIAS: Incidencia[] = [
-  { id: "INC-218", tipo: "cliente_ausente", titulo: "Ana Rodríguez no estaba en el domicilio", detalle: "Roberto tocó 3 veces, sin respuesta. Vecino confirma que viajó.", fecha: "Hoy 11:18", prioridad: "alta",  estado: "abierta",    referencia: "MUE-1044" },
-  { id: "INC-217", tipo: "vehiculo",        titulo: "Camión AB 770 HD continúa en taller",     detalle: "Pendiente repuesto de embrague. ETA jueves.",                       fecha: "Hoy 09:05", prioridad: "alta",  estado: "en_revision" },
-  { id: "INC-216", tipo: "demora",          titulo: "Camión 2 con 40 min de demora",           detalle: "Tránsito intenso sobre Av. 9 de Julio.",                            fecha: "Hoy 10:42", prioridad: "media", estado: "abierta",    referencia: "Camión 2" },
-  { id: "INC-215", tipo: "reprogramacion",  titulo: "Lucía Fernández pidió cambiar fecha",     detalle: "Cliente solicitó reprogramar para mañana 10:00.",                    fecha: "Hoy 08:02", prioridad: "media", estado: "resuelta",   referencia: "MUE-1046" },
-  { id: "INC-214", tipo: "chofer",          titulo: "Marcelo reportó dirección incorrecta",    detalle: "El número de calle no coincide con el cliente.",                     fecha: "Ayer 17:30",prioridad: "baja",  estado: "abierta",    referencia: "MUE-1041" },
-  { id: "INC-213", tipo: "cliente_ausente", titulo: "Pedido MUE-1038 — cliente ausente",       detalle: "Reprogramado para el 24/06.",                                        fecha: "Ayer 14:10",prioridad: "baja",  estado: "resuelta",   referencia: "MUE-1038" },
+  {
+    id: "INC-218", tipo: "cliente_ausente", titulo: "Ana Rodríguez no estaba en el domicilio",
+    detalle: "Roberto tocó timbre 3 veces sin respuesta. El vecino del 4°A confirmó que la señora viajó por el fin de semana. El placard queda en el camión hasta que se coordine nueva fecha.",
+    fecha: "Hoy 11:18", prioridad: "alta", estado: "abierta", referencia: "MUE-1044",
+    pedidoId: "MUE-1044", cliente: "Ana Rodríguez", clienteTelefono: "11 4123-8801",
+    chofer: "Roberto Giménez", vehiculo: "Iveco Daily — AE 432 KP",
+    responsable: "Juan López", costoEstimado: 4500, tiempoPerdido: 45, reprogramacionRequerida: true,
+    historial: [
+      { tipo: "apertura",      texto: "Roberto Giménez reportó cliente ausente en Av. Cabildo 2890", fecha: "22/06/2026", hora: "11:18", autor: "Roberto Giménez" },
+      { tipo: "actualizacion", texto: "Juan López tomó la incidencia",                                fecha: "22/06/2026", hora: "11:20", autor: "Juan López" },
+      { tipo: "contacto",      texto: "Intento de contacto por WhatsApp — sin respuesta",             fecha: "22/06/2026", hora: "11:22", autor: "Juan López" },
+      { tipo: "contacto",      texto: "Llamada al cliente — no atiende",                              fecha: "22/06/2026", hora: "11:35", autor: "Juan López" },
+    ],
+  },
+  {
+    id: "INC-217", tipo: "vehiculo", titulo: "Camión AB 770 HD continúa en taller",
+    detalle: "Pendiente repuesto de embrague. El taller confirma ETA para el jueves 26/06 por la tarde. Capacidad operativa reducida un 25%. Esteban Ortiz cubre las rutas con el Renault Master.",
+    fecha: "Hoy 09:05", prioridad: "alta", estado: "en_revision",
+    vehiculo: "Fiat Ducato — AB 770 HD",
+    responsable: "Juan López", costoEstimado: 18500, tiempoPerdido: 480, reprogramacionRequerida: false,
+    historial: [
+      { tipo: "apertura",      texto: "Encargado del taller reportó falla de embrague",                fecha: "20/06/2026", hora: "17:00", autor: "Taller Externo" },
+      { tipo: "actualizacion", texto: "Juan López tomó la incidencia y notificó a toda la flota",      fecha: "21/06/2026", hora: "09:10", autor: "Juan López" },
+      { tipo: "actualizacion", texto: "Se solicitó repuesto — plazo estimado: 2 días hábiles",         fecha: "21/06/2026", hora: "09:30", autor: "Juan López" },
+      { tipo: "actualizacion", texto: "Esteban Ortiz cubrirá las rutas con el Renault Master (AC 902)", fecha: "21/06/2026", hora: "10:00", autor: "Juan López" },
+      { tipo: "actualizacion", texto: "Taller confirma ETA: jueves 26/06 por la tarde",                fecha: "22/06/2026", hora: "09:05", autor: "Taller Externo" },
+    ],
+  },
+  {
+    id: "INC-216", tipo: "demora", titulo: "Camión 2 con 40 min de demora acumulada",
+    detalle: "Tránsito intenso sobre Av. 9 de Julio y Libertador. Tres entregas en riesgo de caer fuera de la franja horaria comprometida con el cliente.",
+    fecha: "Hoy 10:42", prioridad: "media", estado: "abierta", referencia: "Camión 2",
+    chofer: "Marcelo Núñez", vehiculo: "Mercedes Sprinter — AD 118 RT",
+    responsable: "Juan López", costoEstimado: 1800, tiempoPerdido: 40, reprogramacionRequerida: false,
+    historial: [
+      { tipo: "apertura",      texto: "Marcelo Núñez reportó demora por tráfico en 9 de Julio",        fecha: "22/06/2026", hora: "10:42", autor: "Marcelo Núñez" },
+      { tipo: "actualizacion", texto: "Sistema notificó automáticamente a Juan López",                  fecha: "22/06/2026", hora: "10:43", autor: "Sistema" },
+      { tipo: "contacto",      texto: "Se notificó a los clientes del Camión 2 sobre posible demora",   fecha: "22/06/2026", hora: "10:50", autor: "Juan López" },
+    ],
+  },
+  {
+    id: "INC-215", tipo: "reprogramacion", titulo: "Lucía Fernández solicitó cambio de fecha",
+    detalle: "La cliente llamó a primera hora para reprogramar la entrega. Nueva fecha acordada para el 23/06 entre 10:00 y 13:00. Camión 2 reasignado.",
+    fecha: "Hoy 08:02", prioridad: "media", estado: "resuelta", referencia: "MUE-1046",
+    pedidoId: "MUE-1046", cliente: "Lucía Fernández", clienteTelefono: "11 6678-2210",
+    chofer: "Marcelo Núñez", vehiculo: "Mercedes Sprinter — AD 118 RT",
+    responsable: "Juan López", costoEstimado: 2800, tiempoPerdido: 30, reprogramacionRequerida: true,
+    historial: [
+      { tipo: "apertura",      texto: "Cliente llamó para solicitar cambio de fecha de entrega",       fecha: "22/06/2026", hora: "08:02", autor: "Sofía (Ventas)" },
+      { tipo: "actualizacion", texto: "Juan López tomó la incidencia",                                  fecha: "22/06/2026", hora: "08:05", autor: "Juan López" },
+      { tipo: "contacto",      texto: "Llamada con cliente para confirmar nueva franja horaria",        fecha: "22/06/2026", hora: "08:15", autor: "Juan López" },
+      { tipo: "actualizacion", texto: "Pedido reprogramado: 23/06 — 10:00 a 13:00",                    fecha: "22/06/2026", hora: "08:30", autor: "Juan López" },
+      { tipo: "resolucion",    texto: "Incidencia resuelta — camión reasignado para mañana",            fecha: "22/06/2026", hora: "08:35", autor: "Juan López" },
+    ],
+  },
+  {
+    id: "INC-214", tipo: "chofer", titulo: "Marcelo reportó dirección incorrecta en MUE-1041",
+    detalle: "El número de calle indicado en el pedido no coincide. El cliente reportó Av. Corrientes 3210 pero el piso y departamento no figuran en el sistema. Requiere validación.",
+    fecha: "Ayer 17:30", prioridad: "baja", estado: "abierta", referencia: "MUE-1041",
+    pedidoId: "MUE-1041", cliente: "Rodrigo Salas", clienteTelefono: "11 5009-3322",
+    chofer: "Marcelo Núñez", vehiculo: "Mercedes Sprinter — AD 118 RT",
+    responsable: "Marcelo Núñez", costoEstimado: 800, tiempoPerdido: 20, reprogramacionRequerida: false,
+    historial: [
+      { tipo: "apertura",  texto: "Marcelo Núñez reportó que el número de calle no coincide en MUE-1041", fecha: "21/06/2026", hora: "17:30", autor: "Marcelo Núñez" },
+      { tipo: "contacto",  texto: "Se intentó contactar al cliente — sin respuesta",                       fecha: "21/06/2026", hora: "17:35", autor: "Marcelo Núñez" },
+    ],
+  },
+  {
+    id: "INC-213", tipo: "cliente_ausente", titulo: "Pedido MUE-1038 — cliente ausente",
+    detalle: "Roberto Giménez se presentó a las 14:10 en el domicilio. El cliente no atendió tras 3 intentos de timbre. Se reprogramó para el 24/06 entre 10:00 y 13:00.",
+    fecha: "Ayer 14:10", prioridad: "baja", estado: "resuelta", referencia: "MUE-1038",
+    pedidoId: "MUE-1038", cliente: "Hernán Ríos", clienteTelefono: "11 4421-1180",
+    chofer: "Roberto Giménez", vehiculo: "Iveco Daily — AE 432 KP",
+    responsable: "Juan López", costoEstimado: 3200, tiempoPerdido: 35, reprogramacionRequerida: true,
+    historial: [
+      { tipo: "apertura",      texto: "Roberto Giménez reportó cliente ausente en el domicilio",        fecha: "21/06/2026", hora: "14:10", autor: "Roberto Giménez" },
+      { tipo: "actualizacion", texto: "Juan López tomó la incidencia",                                  fecha: "21/06/2026", hora: "14:15", autor: "Juan López" },
+      { tipo: "contacto",      texto: "WhatsApp al cliente: respondió en 10 minutos",                   fecha: "21/06/2026", hora: "14:20", autor: "Juan López" },
+      { tipo: "actualizacion", texto: "Pedido reprogramado: 24/06 — 10:00 a 13:00",                    fecha: "21/06/2026", hora: "14:30", autor: "Juan López" },
+      { tipo: "resolucion",    texto: "Incidencia resuelta",                                            fecha: "21/06/2026", hora: "14:32", autor: "Juan López" },
+    ],
+  },
 ];
 
 // ============== Reportes operativos ==============
