@@ -15,6 +15,7 @@ import {
   ClipboardList,
   AlertTriangle,
   ClipboardCheck,
+  TrendingUp,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_shell")({
@@ -33,6 +34,7 @@ const NAV: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exac
   { to: "/vehiculos", label: "Vehículos", icon: Truck },
   { to: "/choferes", label: "Choferes", icon: Users },
   { to: "/reportes", label: "Reportes", icon: BarChart3 },
+  { to: "/indicadores", label: "Indicadores Operativos", icon: TrendingUp },
   { to: "/configuracion", label: "Configuración", icon: Settings },
 ];
 

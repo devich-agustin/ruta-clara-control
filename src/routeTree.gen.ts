@@ -19,6 +19,7 @@ import { Route as ShellPreparacionRouteImport } from './routes/_shell.preparacio
 import { Route as ShellPedidosRouteImport } from './routes/_shell.pedidos'
 import { Route as ShellOperacionesRouteImport } from './routes/_shell.operaciones'
 import { Route as ShellNuevoPedidoRouteImport } from './routes/_shell.nuevo-pedido'
+import { Route as ShellIndicadoresRouteImport } from './routes/_shell.indicadores'
 import { Route as ShellIncidenciasRouteImport } from './routes/_shell.incidencias'
 import { Route as ShellConfiguracionRouteImport } from './routes/_shell.configuracion'
 import { Route as ShellChoferesRouteImport } from './routes/_shell.choferes'
@@ -74,6 +75,11 @@ const ShellNuevoPedidoRoute = ShellNuevoPedidoRouteImport.update({
   path: '/nuevo-pedido',
   getParentRoute: () => ShellRoute,
 } as any)
+const ShellIndicadoresRoute = ShellIndicadoresRouteImport.update({
+  id: '/indicadores',
+  path: '/indicadores',
+  getParentRoute: () => ShellRoute,
+} as any)
 const ShellIncidenciasRoute = ShellIncidenciasRouteImport.update({
   id: '/incidencias',
   path: '/incidencias',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/choferes': typeof ShellChoferesRoute
   '/configuracion': typeof ShellConfiguracionRoute
   '/incidencias': typeof ShellIncidenciasRoute
+  '/indicadores': typeof ShellIndicadoresRoute
   '/nuevo-pedido': typeof ShellNuevoPedidoRoute
   '/operaciones': typeof ShellOperacionesRoute
   '/pedidos': typeof ShellPedidosRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/choferes': typeof ShellChoferesRoute
   '/configuracion': typeof ShellConfiguracionRoute
   '/incidencias': typeof ShellIncidenciasRoute
+  '/indicadores': typeof ShellIndicadoresRoute
   '/nuevo-pedido': typeof ShellNuevoPedidoRoute
   '/operaciones': typeof ShellOperacionesRoute
   '/pedidos': typeof ShellPedidosRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/_shell/choferes': typeof ShellChoferesRoute
   '/_shell/configuracion': typeof ShellConfiguracionRoute
   '/_shell/incidencias': typeof ShellIncidenciasRoute
+  '/_shell/indicadores': typeof ShellIndicadoresRoute
   '/_shell/nuevo-pedido': typeof ShellNuevoPedidoRoute
   '/_shell/operaciones': typeof ShellOperacionesRoute
   '/_shell/pedidos': typeof ShellPedidosRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/choferes'
     | '/configuracion'
     | '/incidencias'
+    | '/indicadores'
     | '/nuevo-pedido'
     | '/operaciones'
     | '/pedidos'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/choferes'
     | '/configuracion'
     | '/incidencias'
+    | '/indicadores'
     | '/nuevo-pedido'
     | '/operaciones'
     | '/pedidos'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/_shell/choferes'
     | '/_shell/configuracion'
     | '/_shell/incidencias'
+    | '/_shell/indicadores'
     | '/_shell/nuevo-pedido'
     | '/_shell/operaciones'
     | '/_shell/pedidos'
@@ -279,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellNuevoPedidoRouteImport
       parentRoute: typeof ShellRoute
     }
+    '/_shell/indicadores': {
+      id: '/_shell/indicadores'
+      path: '/indicadores'
+      fullPath: '/indicadores'
+      preLoaderRoute: typeof ShellIndicadoresRouteImport
+      parentRoute: typeof ShellRoute
+    }
     '/_shell/incidencias': {
       id: '/_shell/incidencias'
       path: '/incidencias'
@@ -323,6 +342,7 @@ interface ShellRouteChildren {
   ShellChoferesRoute: typeof ShellChoferesRoute
   ShellConfiguracionRoute: typeof ShellConfiguracionRoute
   ShellIncidenciasRoute: typeof ShellIncidenciasRoute
+  ShellIndicadoresRoute: typeof ShellIndicadoresRoute
   ShellNuevoPedidoRoute: typeof ShellNuevoPedidoRoute
   ShellOperacionesRoute: typeof ShellOperacionesRoute
   ShellPedidosRoute: typeof ShellPedidosRoute
@@ -339,6 +359,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellChoferesRoute: ShellChoferesRoute,
   ShellConfiguracionRoute: ShellConfiguracionRoute,
   ShellIncidenciasRoute: ShellIncidenciasRoute,
+  ShellIndicadoresRoute: ShellIndicadoresRoute,
   ShellNuevoPedidoRoute: ShellNuevoPedidoRoute,
   ShellOperacionesRoute: ShellOperacionesRoute,
   ShellPedidosRoute: ShellPedidosRoute,
