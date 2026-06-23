@@ -129,6 +129,36 @@ function getWeekOffsetForDate(isoDate: string): number {
   return -1;
 }
 
+// ── Recomendación de fecha ──────────────────────────────────────────────────
+
+interface DateReco {
+  level: "ok" | "warn" | "full";
+  pct: number;
+  day: DayData;
+  suggestion?: DayData;
+}
+
+function getDateReco(isoDate: string): DateReco | null {
+  for (let w = 0; w < 4; w++) {
+    const day = getWeekData(w).find((d) => d.fechaISO === isoDate);
+    if (day) {
+      const pct = Math.round((day.entregas / day.capacidad) * 100);
+      if (pct >= 86) {
+        const allDays = [0, 1, 2, 3]
+          .flatMap((w2) => getWeekData(w2))
+          .filter((d) => d.fechaISO !== isoDate);
+        const suggestion = allDays.sort(
+          (a, b) => a.entregas / a.capacidad - b.entregas / b.capacidad,
+        )[0];
+        return { level: "full", pct, day, suggestion };
+      }
+      if (pct >= 70) return { level: "warn", pct, day };
+      return { level: "ok", pct, day };
+    }
+  }
+  return null;
+}
+
 // ── Tipos ───────────────────────────────────────────────────────────────────
 
 type AddressValidation = "none" | "validated" | "manual";
@@ -236,8 +266,13 @@ function NuevoPedidoPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* ── Panel lateral — arriba en mobile, derecha en desktop ─────── */}
+        <aside className="lg:order-last lg:col-span-1">
+          <LogisticsSidebar selectedDate={form.fecha} />
+        </aside>
+
         {/* ── Formulario ────────────────────────────────────────────────── */}
-        <form onSubmit={handleSubmit} className="space-y-6 lg:col-span-2">
+        <form onSubmit={handleSubmit} className="space-y-6 lg:col-span-2 lg:order-first">
 
           <Card title="Cliente">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -326,6 +361,7 @@ function NuevoPedidoPage() {
                   onChange={(e) => setField("fecha", e.target.value)}
                   className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
+                <DateRecommendation isoDate={form.fecha} />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium">Franja horaria</label>
@@ -361,10 +397,6 @@ function NuevoPedidoPage() {
           </div>
         </form>
 
-        {/* ── Panel lateral ─────────────────────────────────────────────── */}
-        <aside>
-          <LogisticsSidebar selectedDate={form.fecha} />
-        </aside>
       </div>
     </div>
   );
@@ -604,6 +636,54 @@ function LogisticsSidebar({ selectedDate }: { selectedDate: string }) {
           <span className="h-2 w-2 rounded-full bg-destructive" /> Saturado
         </span>
       </div>
+    </div>
+  );
+}
+
+// ── DateRecommendation ──────────────────────────────────────────────────────
+
+function DateRecommendation({ isoDate }: { isoDate: string }) {
+  const reco = getDateReco(isoDate);
+  if (!reco) return null;
+
+  if (reco.level === "ok") {
+    return (
+      <div className="mt-2 flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+        <span>
+          Día disponible — {reco.day.entregas} de {reco.day.capacidad} entregas asignadas ({reco.pct}%)
+        </span>
+      </div>
+    );
+  }
+
+  if (reco.level === "warn") {
+    return (
+      <div className="mt-2 flex items-center gap-1.5 text-xs text-warning">
+        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+        <span>
+          Alta demanda ({reco.pct}% ocupado). Podés elegir otro día si el cliente acepta.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-md border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs">
+      <div className="flex items-center gap-1.5 font-medium text-destructive">
+        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+        <span>Día con {reco.pct}% de ocupación — sin capacidad disponible</span>
+      </div>
+      {reco.suggestion && (
+        <p className="mt-1 text-muted-foreground">
+          Se recomienda{" "}
+          <span className="font-semibold text-foreground">
+            {reco.suggestion.dia} {reco.suggestion.fecha}
+          </span>{" "}
+          con {Math.round((reco.suggestion.entregas / reco.suggestion.capacidad) * 100)}% de
+          ocupación.
+        </p>
+      )}
     </div>
   );
 }

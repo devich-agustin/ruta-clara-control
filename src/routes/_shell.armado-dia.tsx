@@ -60,6 +60,7 @@ interface VehicleConfig {
   chofer: string;
   maxPedidos: number;
   capacidad: string;
+  capacidadM3: number;
   isTruck: boolean;
 }
 
@@ -71,6 +72,7 @@ const VEHICLE_CONFIGS: Record<Exclude<ColumnId, "sin_asignar">, VehicleConfig> =
     chofer: "Roberto Giménez",
     maxPedidos: 6,
     capacidad: "4.5 m³",
+    capacidadM3: 4.5,
     isTruck: true,
   },
   camion_2: {
@@ -80,6 +82,7 @@ const VEHICLE_CONFIGS: Record<Exclude<ColumnId, "sin_asignar">, VehicleConfig> =
     chofer: "Marcelo Núñez",
     maxPedidos: 7,
     capacidad: "5.2 m³",
+    capacidadM3: 5.2,
     isTruck: true,
   },
   flete_externo: {
@@ -89,6 +92,7 @@ const VEHICLE_CONFIGS: Record<Exclude<ColumnId, "sin_asignar">, VehicleConfig> =
     chofer: "A designar",
     maxPedidos: 4,
     capacidad: "Variable",
+    capacidadM3: 0,
     isTruck: false,
   },
 };
@@ -140,7 +144,7 @@ function PedidoCard({
   return (
     <div
       className={
-        "rounded-lg border bg-card p-3 shadow-sm select-none " +
+        "relative rounded-lg border bg-card p-3 shadow-sm select-none " +
         (isDragging
           ? "border-primary shadow-lg opacity-90 rotate-1"
           : pedido.confirmacion === "no_responde"
@@ -149,6 +153,19 @@ function PedidoCard({
         " transition-all"
       }
     >
+      {/* Confirmation status dot */}
+      <div className="absolute -right-1 -top-1 z-10">
+        <div
+          className={
+            "h-2.5 w-2.5 rounded-full ring-2 ring-card " +
+            (pedido.confirmacion === "confirmado"
+              ? "bg-success"
+              : pedido.confirmacion === "no_responde"
+                ? "bg-destructive"
+                : "bg-warning")
+          }
+        />
+      </div>
       {/* Fila superior: ID + prioridad */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
@@ -302,20 +319,51 @@ function TruckColumn({ columnId, ids }: { columnId: Exclude<ColumnId, "sin_asign
 
         {/* Capacidad */}
         <div className="mt-3">
-          <div className="mb-1 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Capacidad</span>
+          <div className="mb-1.5 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Pedidos</span>
             <span className="font-medium">
-              {ids.length}{" "}
-              <span className="text-muted-foreground">/ {config.maxPedidos} pedidos</span>
+              {ids.length}
+              <span className="text-muted-foreground"> / {config.maxPedidos}</span>
             </span>
           </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
             <div
               className={"h-full rounded-full transition-all " + barColor}
               style={{ width: `${Math.min(pct, 100)}%` }}
             />
           </div>
-          <div className="mt-0.5 text-right text-[10px] text-muted-foreground">{config.capacidad}</div>
+          <div className="mt-1 flex items-center justify-between text-[11px]">
+            <span
+              className={
+                "font-semibold " +
+                (pct >= 90 ? "text-destructive" : pct >= 70 ? "text-warning" : "text-success")
+              }
+            >
+              {pct}% utilizado
+            </span>
+            <span className="text-muted-foreground">{config.capacidad}</span>
+          </div>
+          {config.capacidadM3 > 0 && (
+            <div className="mt-2 rounded-md bg-muted/50 px-2.5 py-2 text-[11px]">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">m³ estimados</span>
+                <span className="font-medium">{(ids.length * 0.5).toFixed(1)} m³</span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between">
+                <span className="text-muted-foreground">Disponible</span>
+                <span
+                  className={
+                    "font-medium " +
+                    (config.capacidadM3 - ids.length * 0.5 < 1
+                      ? "text-destructive"
+                      : "text-foreground")
+                  }
+                >
+                  {Math.max(0, config.capacidadM3 - ids.length * 0.5).toFixed(1)} m³
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -478,7 +526,7 @@ function ArmadoDiaPage() {
       </div>
 
       {/* Resumen */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Total pedidos" value={totalPedidos} tone="text-foreground" />
         <StatCard label="Asignados" value={asignados} tone="text-success" />
         <StatCard
@@ -508,6 +556,9 @@ function ArmadoDiaPage() {
       )}
 
       {/* Board de drag & drop */}
+      <p className="text-xs text-muted-foreground lg:hidden">
+        Deslizá horizontalmente para ver todos los vehículos
+      </p>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}

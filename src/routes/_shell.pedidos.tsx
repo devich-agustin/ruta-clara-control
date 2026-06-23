@@ -72,40 +72,77 @@ function PedidosPage() {
       </div>
 
       <div className="rounded-lg border border-border bg-card">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
-          <div className="relative flex-1 min-w-[220px]">
+        <div className="flex flex-col gap-3 border-b border-border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:p-4">
+          {/* Search — full width on mobile */}
+          <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar por pedido, cliente, dirección…"
-              className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="h-9 w-full rounded-md border border-border bg-muted/50 pl-9 pr-3 text-sm outline-none focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/15"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-background p-1">
-            {ESTADOS.map((e) => (
-              <button
-                key={e.value}
-                onClick={() => setEstado(e.value)}
-                className={
-                  "rounded px-3 py-1 text-xs font-medium transition-colors " +
-                  (estado === e.value
-                    ? "bg-card text-foreground shadow-sm ring-1 ring-border"
-                    : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                {e.label}
-              </button>
-            ))}
-          </div>
+          {/* Filters row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-0.5 overflow-x-auto rounded-md border border-border bg-background p-1">
+              {ESTADOS.map((e) => (
+                <button
+                  key={e.value}
+                  onClick={() => setEstado(e.value)}
+                  className={
+                    "whitespace-nowrap rounded px-2.5 py-1 text-xs font-medium transition-colors " +
+                    (estado === e.value
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
 
-          <button className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted">
-            <Filter className="h-4 w-4" /> Fecha: Hoy <ChevronDown className="h-3.5 w-3.5" />
-          </button>
+            <button className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted">
+              <Filter className="h-4 w-4" /><span className="hidden sm:inline">Fecha:</span> Hoy <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile card list (< sm) */}
+        <div className="divide-y divide-border sm:hidden">
+          {filtered.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => openPedido(p)}
+              className="cursor-pointer px-4 py-3.5 transition-colors hover:bg-muted/40 active:bg-muted/60"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] font-medium text-muted-foreground">{p.id}</span>
+                    <ConfirmacionBadge estado={p.confirmacion} />
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-foreground">{p.cliente}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">{p.direccion} · {p.barrio}</div>
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">{p.producto}</div>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <EstadoBadge estado={p.estado} />
+                  <span className="text-xs text-muted-foreground">{p.fecha}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="px-4 py-16 text-center text-sm text-muted-foreground">
+              No hay pedidos que coincidan con los filtros.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop table (≥ sm) */}
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -116,6 +153,7 @@ function PedidosPage() {
                 <th className="px-6 py-3">Fecha</th>
                 <th className="px-6 py-3">Confirmación</th>
                 <th className="px-6 py-3">Estado</th>
+                <th className="w-24" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -123,7 +161,7 @@ function PedidosPage() {
                 <tr
                   key={p.id}
                   onClick={() => openPedido(p)}
-                  className="cursor-pointer hover:bg-muted/30"
+                  className="group cursor-pointer hover:bg-muted/50"
                 >
                   <td className="px-6 py-3.5 font-mono text-xs font-medium text-foreground">{p.id}</td>
                   <td className="px-6 py-3.5">
@@ -140,11 +178,16 @@ function PedidosPage() {
                     <ConfirmacionBadge estado={p.confirmacion} />
                   </td>
                   <td className="px-6 py-3.5"><EstadoBadge estado={p.estado} /></td>
+                  <td className="py-3.5 pr-5 text-right">
+                    <span className="whitespace-nowrap text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                      Ver detalle →
+                    </span>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-16 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-6 py-16 text-center text-sm text-muted-foreground">
                     No hay pedidos que coincidan con los filtros.
                   </td>
                 </tr>

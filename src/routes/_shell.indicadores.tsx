@@ -133,7 +133,7 @@ function KpiCard({
   return (
     <div
       className={
-        "rounded-lg border border-border bg-card p-5 " +
+        "rounded-lg border border-border bg-card p-4 sm:p-5 " +
         (highlight ? "ring-2 ring-success/30" : "")
       }
     >
@@ -141,7 +141,7 @@ function KpiCard({
         <span className="text-sm font-medium text-muted-foreground">{label}</span>
         <Icon className={"h-4 w-4 " + tone} />
       </div>
-      <div className={"mt-3 text-3xl font-bold tracking-tight " + tone}>{value}</div>
+      <div className={"mt-2 text-2xl font-bold tracking-tight sm:mt-3 sm:text-3xl " + tone}>{value}</div>
       <div className="mt-1 flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{sub}</span>
         {delta && (
@@ -287,8 +287,8 @@ function IndicadoresPage() {
           { label: "Tiempo/ruta prom.", value: `${tiempoTotalRuta} min`, tone: "text-foreground", delta: `${paradasPromedioCamion} paradas` },
           { label: "Tiempo/parada",     value: `${tiempoPromedioParada} min`, tone: "text-foreground", delta: "-2 min vs. ant." },
         ].map((k) => (
-          <div key={k.label} className="rounded-lg border border-border bg-card p-4">
-            <div className="text-xs text-muted-foreground">{k.label}</div>
+          <div key={k.label} className="rounded-lg border border-border bg-card p-3 sm:p-4">
+            <div className="text-[11px] text-muted-foreground sm:text-xs">{k.label}</div>
             <div className={"mt-1.5 text-xl font-bold " + k.tone}>{k.value}</div>
             <div className="mt-0.5 text-[11px] text-muted-foreground">{k.delta}</div>
           </div>

@@ -267,9 +267,9 @@ function IncidenciasPage() {
       <div className="rounded-lg border border-border bg-card">
 
         {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
+        <div className="flex flex-col gap-3 border-b border-border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:p-4">
           {/* Tabs de estado */}
-          <div className="flex items-center gap-1 rounded-md border border-border bg-background p-1">
+          <div className="flex items-center gap-0.5 rounded-md border border-border bg-background p-1">
             {FILTROS_ESTADO.map((f) => (
               <button
                 key={f.key}
@@ -287,40 +287,42 @@ function IncidenciasPage() {
           </div>
 
           {/* Dropdowns de filtro */}
-          <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-            className="h-9 cursor-pointer rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none hover:bg-muted focus:border-primary"
-          >
-            <option value="todas">Tipo: Todos</option>
-            {(Object.keys(INCIDENCIA_LABEL) as TipoIncidencia[]).map((t) => (
-              <option key={t} value={t}>{INCIDENCIA_LABEL[t]}</option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value)}
+              className="h-9 cursor-pointer rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none hover:bg-muted focus:border-primary"
+            >
+              <option value="todas">Tipo: Todos</option>
+              {(Object.keys(INCIDENCIA_LABEL) as TipoIncidencia[]).map((t) => (
+                <option key={t} value={t}>{INCIDENCIA_LABEL[t]}</option>
+              ))}
+            </select>
 
-          <select
-            value={filtroPrioridad}
-            onChange={(e) => setFiltroPrioridad(e.target.value)}
-            className="h-9 cursor-pointer rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none hover:bg-muted focus:border-primary"
-          >
-            <option value="todas">Prioridad: Todas</option>
-            <option value="alta">Alta</option>
-            <option value="media">Media</option>
-            <option value="baja">Baja</option>
-          </select>
+            <select
+              value={filtroPrioridad}
+              onChange={(e) => setFiltroPrioridad(e.target.value)}
+              className="h-9 cursor-pointer rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none hover:bg-muted focus:border-primary"
+            >
+              <option value="todas">Prioridad: Todas</option>
+              <option value="alta">Alta</option>
+              <option value="media">Media</option>
+              <option value="baja">Baja</option>
+            </select>
 
-          <select
-            value={filtroResponsable}
-            onChange={(e) => setFiltroResponsable(e.target.value)}
-            className="h-9 cursor-pointer rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none hover:bg-muted focus:border-primary"
-          >
-            <option value="todos">Responsable: Todos</option>
-            {RESPONSABLES.map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
+            <select
+              value={filtroResponsable}
+              onChange={(e) => setFiltroResponsable(e.target.value)}
+              className="h-9 cursor-pointer rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none hover:bg-muted focus:border-primary"
+            >
+              <option value="todos">Responsable: Todos</option>
+              {RESPONSABLES.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
 
-          <span className="ml-auto text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground sm:ml-auto">
             {items.length} resultado{items.length !== 1 ? "s" : ""}
           </span>
         </div>
@@ -334,7 +336,7 @@ function IncidenciasPage() {
                 key={i.id}
                 onClick={() => setSelectedId(i.id)}
                 className={
-                  "flex cursor-pointer items-start gap-4 px-6 py-4 transition-colors hover:bg-muted/40 " +
+                  "flex cursor-pointer items-start gap-3 px-4 py-4 sm:gap-4 sm:px-6 transition-colors hover:bg-muted/40 " +
                   (selectedId === i.id ? "bg-muted/50" : "")
                 }
               >
@@ -354,7 +356,7 @@ function IncidenciasPage() {
                     )}
                   </div>
                   <div className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">{i.detalle}</div>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                     <span>{i.fecha}</span>
                     <span>·</span>
                     <span>{INCIDENCIA_LABEL[i.tipo]}</span>
@@ -506,7 +508,7 @@ function IncidenciasPage() {
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Impacto estimado
                   </h3>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <ImpactoCard
                       label="Costo estimado"
                       value={`$${selected.costoEstimado.toLocaleString("es-AR")}`}
@@ -623,7 +625,7 @@ function ImpactoCard({
   label: string; value: string; icon: typeof Clock; tone: string;
 }) {
   return (
-    <div className="rounded-md border border-border bg-muted/30 p-3 text-center">
+    <div className="rounded-md border border-border bg-muted/30 p-2 sm:p-3 text-center">
       <div className={"mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-full " + tone}>
         <Icon className="h-3.5 w-3.5" />
       </div>
