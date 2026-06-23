@@ -47,6 +47,7 @@ export interface Pedido {
   estado: EstadoPedido;
   confirmacion: ConfirmacionCliente;
   prioridad: PrioridadPedido;
+  direccionValidada?: boolean;
 }
 
 export const PEDIDOS: Pedido[] = [
