@@ -28,6 +28,7 @@ import {
   subscribe,
   hydrate,
   marcarEntregado,
+  registrarEntregaFallida,
   crearIncidencia,
   COLUMN_INFO,
 } from "@/lib/store";
@@ -141,6 +142,7 @@ function ChoferMobile() {
       marcarEntregado(id, COLUMN_INFO.camion_1.chofer);
     } else {
       const pedido = getPedidos().find((p) => p.id === id);
+      registrarEntregaFallida(id, motivo ?? "Entrega fallida", COLUMN_INFO.camion_1.chofer);
       const tipo: TipoIncidencia =
         motivo === "Cliente ausente"
           ? "cliente_ausente"

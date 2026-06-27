@@ -179,6 +179,35 @@ export function getEventos(id: string): EventoPedido[] {
   return getTimeline(id);                // fallback demo para sembrados sin timeline
 }
 
+// Convierte fecha "dd/mm/yyyy" + hora "hh:mm" en un entero ordenable.
+function sortKey(fecha: string, hora: string): number {
+  const [d, m, y] = fecha.split("/").map((n) => Number(n) || 0);
+  const [hh, min] = hora.split(":").map((n) => Number(n) || 0);
+  return y * 1e8 + m * 1e6 + d * 1e4 + hh * 100 + min;
+}
+
+export interface ActividadItem {
+  pedidoId: string;
+  cliente: string;
+  evento: EventoPedido;
+}
+
+// Feed de actividad reciente: aplana los eventos de todos los pedidos y los
+// ordena del más reciente al más antiguo. Alimenta el Dashboard.
+export function getActividadReciente(limit = 6): ActividadItem[] {
+  const items: ActividadItem[] = [];
+  _pedidos.forEach((p) => {
+    getEventos(p.id).forEach((evento) => items.push({ pedidoId: p.id, cliente: p.cliente, evento }));
+  });
+  items.sort((a, b) => sortKey(b.evento.fecha, b.evento.hora) - sortKey(a.evento.fecha, a.evento.hora));
+  return items.slice(0, limit);
+}
+
+// Ids de pedidos creados durante esta sesión (tienen un evento "creado" propio).
+export function getIdsCreadosEnSesion(): string[] {
+  return Object.keys(_eventos).filter((id) => (_eventos[id] ?? []).some((e) => e.tipo === "creado"));
+}
+
 export function getReprogramaciones(id: string): Reprogramacion[] {
   return [...(_reprogs[id] ?? []), ...(REPROGRAMACIONES[id] ?? [])];
 }
@@ -208,7 +237,34 @@ export function updatePedido(id: string, patch: Partial<Pedido>): void {
   notify();
 }
 
+// Reasigna el board completo (drag & drop del Armado del Día) y registra en el
+// timeline cada pedido que cambió de columna, comparando contra el estado previo.
 export function setColumns(next: Columns): void {
+  const prev = _columns;
+  const colDe = (cols: Columns, id: string): ArmadoColumnId =>
+    (Object.keys(cols) as ArmadoColumnId[]).find((k) => cols[k].includes(id)) ?? "sin_asignar";
+
+  const ids = new Set<string>([...Object.values(prev).flat(), ...Object.values(next).flat()]);
+  const s = stamp();
+  ids.forEach((id) => {
+    const antes = colDe(prev, id);
+    const ahora = colDe(next, id);
+    if (antes === ahora) return;
+    const info = COLUMN_INFO[ahora];
+    if (ahora === "sin_asignar") {
+      pushEvento(id, { tipo: "asignado", titulo: "Movido a Sin asignar", fecha: s.fecha, hora: s.hora, autor: USUARIO_ACTUAL });
+    } else {
+      pushEvento(id, {
+        tipo: "asignado",
+        titulo: `Asignado a ${info.label}`,
+        detalle: `${info.vehiculo} · ${info.chofer}`,
+        fecha: s.fecha,
+        hora: s.hora,
+        autor: USUARIO_ACTUAL,
+      });
+    }
+  });
+
   _columns = next;
   persist();
   notify();
@@ -217,8 +273,9 @@ export function setColumns(next: Columns): void {
 export function setConfirmacion(id: string, estado: ConfirmacionCliente): void {
   _pedidos = _pedidos.map((p) => (p.id === id ? { ...p, confirmacion: estado } : p));
   const s = stamp();
-  const label = estado === "confirmado" ? "Confirmado" : estado === "no_responde" ? "No responde" : "Pendiente";
-  pushEvento(id, { tipo: "programado", titulo: `Confirmación del cliente: ${label}`, fecha: s.fecha, hora: s.hora, autor: USUARIO_ACTUAL });
+  const titulo =
+    estado === "confirmado" ? "Cliente confirmó la entrega" : estado === "no_responde" ? "Cliente no responde" : "Confirmación pendiente";
+  pushEvento(id, { tipo: "confirmacion", titulo, fecha: s.fecha, hora: s.hora, autor: USUARIO_ACTUAL });
   persist();
   notify();
 }
@@ -227,6 +284,13 @@ export function marcarEntregado(id: string, autor: string = USUARIO_ACTUAL): voi
   _pedidos = _pedidos.map((p) => (p.id === id ? { ...p, estado: "entregado" } : p));
   const s = stamp();
   pushEvento(id, { tipo: "entregado", titulo: "Entregado", fecha: s.fecha, hora: s.hora, autor });
+  persist();
+  notify();
+}
+
+export function registrarEntregaFallida(id: string, motivo: string, autor: string = USUARIO_ACTUAL): void {
+  const s = stamp();
+  pushEvento(id, { tipo: "fallido", titulo: "Entrega fallida", detalle: motivo, fecha: s.fecha, hora: s.hora, autor });
   persist();
   notify();
 }
@@ -325,7 +389,34 @@ export function crearIncidencia(input: {
 }
 
 export function updateIncidencia(id: string, patch: Partial<Incidencia>): void {
+  const anterior = _incidencias.find((i) => i.id === id);
   _incidencias = _incidencias.map((i) => (i.id === id ? { ...i, ...patch } : i));
+
+  // Si cambia el estado de la incidencia y está asociada a un pedido, lo dejamos
+  // reflejado en el timeline de ese pedido.
+  if (anterior?.pedidoId && patch.estado && patch.estado !== anterior.estado) {
+    const s = stamp();
+    if (patch.estado === "resuelta") {
+      pushEvento(anterior.pedidoId, {
+        tipo: "incidencia_resuelta",
+        titulo: `Incidencia resuelta · ${anterior.id}`,
+        detalle: anterior.titulo,
+        fecha: s.fecha,
+        hora: s.hora,
+        autor: USUARIO_ACTUAL,
+      });
+    } else if (patch.estado === "en_revision") {
+      pushEvento(anterior.pedidoId, {
+        tipo: "ausente",
+        titulo: `Incidencia en revisión · ${anterior.id}`,
+        detalle: anterior.titulo,
+        fecha: s.fecha,
+        hora: s.hora,
+        autor: USUARIO_ACTUAL,
+      });
+    }
+  }
+
   persist();
   notify();
 }

@@ -171,7 +171,19 @@ export function getDetalle(id: string): DetallePedido {
 
 // ============== Línea de tiempo del pedido ==============
 
-export type TipoEvento = "creado" | "preparado" | "programado" | "ruta" | "entregado" | "ausente" | "reprogramado";
+export type TipoEvento =
+  | "creado"
+  | "preparado"
+  | "programado"
+  | "confirmacion"
+  | "ruta"
+  | "asignado"
+  | "entregado"
+  | "fallido"
+  | "ausente"
+  | "reprogramado"
+  | "incidencia_resuelta"
+  | "prioridad";
 
 export interface EventoPedido {
   tipo: TipoEvento;

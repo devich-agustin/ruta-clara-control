@@ -68,13 +68,18 @@ import {
 } from "@/lib/store";
 
 const EVENTO_ICON: Record<TipoEvento, { icon: typeof Clock; tone: string }> = {
-  creado:       { icon: ClipboardList, tone: "bg-muted text-muted-foreground" },
-  preparado:    { icon: Package,       tone: "bg-info/10 text-info" },
-  programado:   { icon: CalendarDays,  tone: "bg-primary/10 text-primary" },
-  ruta:         { icon: RouteIcon,     tone: "bg-primary/10 text-primary" },
-  entregado:    { icon: CheckCircle2,  tone: "bg-success/10 text-success" },
-  ausente:      { icon: UserX,         tone: "bg-destructive/10 text-destructive" },
-  reprogramado: { icon: RefreshCcw,    tone: "bg-warning/10 text-warning" },
+  creado:              { icon: ClipboardList, tone: "bg-muted text-muted-foreground" },
+  preparado:           { icon: Package,       tone: "bg-info/10 text-info" },
+  programado:          { icon: CalendarDays,  tone: "bg-primary/10 text-primary" },
+  confirmacion:        { icon: PhoneCall,     tone: "bg-primary/10 text-primary" },
+  ruta:                { icon: RouteIcon,     tone: "bg-primary/10 text-primary" },
+  asignado:            { icon: Truck,         tone: "bg-primary/10 text-primary" },
+  entregado:           { icon: CheckCircle2,  tone: "bg-success/10 text-success" },
+  fallido:             { icon: XCircle,       tone: "bg-destructive/10 text-destructive" },
+  ausente:             { icon: UserX,         tone: "bg-destructive/10 text-destructive" },
+  reprogramado:        { icon: RefreshCcw,    tone: "bg-warning/10 text-warning" },
+  incidencia_resuelta: { icon: CheckCircle2,  tone: "bg-success/10 text-success" },
+  prioridad:           { icon: Flag,          tone: "bg-warning/10 text-warning" },
 };
 
 const PRIORIDAD_LABEL: Record<Pedido["prioridad"], string> = {
@@ -334,7 +339,7 @@ export function PedidoDetalle({
             </Section>
 
             {/* Timeline */}
-            <Section title="Historial de cambios">
+            <Section title="Línea de tiempo del pedido">
               {timeline.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sin eventos registrados todavía.</p>
               ) : (
