@@ -9,8 +9,11 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { type Pedido } from "@/lib/demo-data";
-import { addPedido, getPedidos } from "@/lib/store";
+import { type Pedido, type ArmadoColumnId } from "@/lib/demo-data";
+import { addPedido, getPedidos, COLUMN_INFO } from "@/lib/store";
+
+// Columnas asignables desde el alta (vehículo / chofer son opcionales).
+const VEHICULOS_ASIGNABLES: Exclude<ArmadoColumnId, "sin_asignar">[] = ["camion_1", "camion_2", "flete_externo"];
 
 export const Route = createFileRoute("/_shell/nuevo-pedido")({
   component: NuevoPedidoPage,
@@ -184,6 +187,8 @@ function NuevoPedidoPage() {
     observaciones: "",
     fecha:         "2026-06-24",
     franja:        "09:00 a 12:00",
+    vehiculo:      "", // "" = sin asignar; si no, una columna asignable
+    chofer:        "", // "" = sin asignar; si no, una columna asignable
   });
 
   const [addressValidation, setAddressValidation] = useState<AddressValidation>("none");
@@ -238,12 +243,18 @@ function NuevoPedidoPage() {
       observaciones:     form.observaciones.trim() || undefined,
     };
 
-    addPedido(nuevoPedido);
+    // Si se eligió vehículo o chofer, el pedido queda asignado a esa columna;
+    // si ambos quedan vacíos, va a "Sin asignar".
+    const col = (form.vehiculo || form.chofer || "sin_asignar") as ArmadoColumnId;
+    addPedido(nuevoPedido, col);
 
     setTimeout(() => {
       setSaving(false);
       toast.success(`Pedido ${nuevoPedido.id} creado`, {
-        description: `${nuevoPedido.cliente} · ${nuevoPedido.producto}`,
+        description:
+          col === "sin_asignar"
+            ? `${nuevoPedido.cliente} · Sin asignar`
+            : `${nuevoPedido.cliente} · ${COLUMN_INFO[col].label}`,
       });
       navigate({ to: "/pedidos" });
     }, 600);
@@ -381,6 +392,32 @@ function NuevoPedidoPage() {
                   <option>10:00 a 13:00</option>
                   <option>13:00 a 16:00</option>
                   <option>16:00 a 19:00</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium">Vehículo (opcional)</label>
+                <select
+                  value={form.vehiculo}
+                  onChange={(e) => setField("vehiculo", e.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                >
+                  <option value="">Sin asignar</option>
+                  {VEHICULOS_ASIGNABLES.map((c) => (
+                    <option key={c} value={c}>{COLUMN_INFO[c].vehiculo}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium">Chofer (opcional)</label>
+                <select
+                  value={form.chofer}
+                  onChange={(e) => setField("chofer", e.target.value)}
+                  className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                >
+                  <option value="">Sin asignar</option>
+                  {VEHICULOS_ASIGNABLES.map((c) => (
+                    <option key={c} value={c}>{COLUMN_INFO[c].chofer}</option>
+                  ))}
                 </select>
               </div>
             </div>

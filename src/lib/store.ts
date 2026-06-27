@@ -4,6 +4,7 @@ import {
   INCIDENCIAS,
   TIMELINE,
   REPROGRAMACIONES,
+  PREPARACION,
   getTimeline,
   type Pedido,
   type ArmadoColumnId,
@@ -12,6 +13,9 @@ import {
   type Reprogramacion,
   type ConfirmacionCliente,
   type TipoIncidencia,
+  type PrioridadPedido,
+  type EstadoPreparacion,
+  type PreparacionItem,
 } from "./demo-data";
 
 // ── Estado compartido de la sesión ──────────────────────────────────────────
@@ -20,8 +24,19 @@ import {
 // (En SSR no hay window/localStorage, por eso todo está protegido con guardas.)
 
 export type Columns = Record<ArmadoColumnId, string[]>;
+export type PrepColumns = Record<EstadoPreparacion, string[]>;
 
 const STORAGE_KEY = "rutia.state.v2";
+
+// Estado inicial del tablero de Preparación, derivado del listado demo.
+function buildPrepInitial(): PrepColumns {
+  const cols: PrepColumns = { pendiente: [], en_preparacion: [], listo: [], despachado: [] };
+  PREPARACION.forEach((p) => cols[p.estado].push(p.pedido));
+  return cols;
+}
+
+// Índice de consulta de las cards de preparación por id de pedido.
+const PREP_INDEX = new Map<string, PreparacionItem>(PREPARACION.map((p) => [p.pedido, p]));
 
 export const USUARIO_ACTUAL = "Juan López";
 
@@ -45,6 +60,18 @@ function cloneColumns(c: Columns): Columns {
     camion_2: [...c.camion_2],
     flete_externo: [...c.flete_externo],
   };
+}
+
+function normalizePrep(raw: unknown): PrepColumns {
+  const base = buildPrepInitial();
+  if (!raw || typeof raw !== "object") return base;
+  const r = raw as Partial<Record<EstadoPreparacion, unknown>>;
+  (Object.keys(base) as EstadoPreparacion[]).forEach((key) => {
+    if (Array.isArray(r[key])) {
+      base[key] = (r[key] as unknown[]).filter((v): v is string => typeof v === "string");
+    }
+  });
+  return base;
 }
 
 function normalizeColumns(raw: unknown): Columns {
@@ -75,6 +102,7 @@ let _columns: Columns = cloneColumns(ARMADO_DIA_INICIAL);
 let _eventos: Record<string, EventoPedido[]> = {};        // eventos añadidos en la sesión
 let _incidencias: Incidencia[] = [...INCIDENCIAS];
 let _reprogs: Record<string, Reprogramacion[]> = {};      // reprogramaciones añadidas en la sesión
+let _prep: PrepColumns = buildPrepInitial();              // tablero de Preparación (depósito)
 let _hydrated = false;
 
 type Listener = () => void;
@@ -117,6 +145,7 @@ function persist() {
         eventos: _eventos,
         incidencias: _incidencias,
         reprogs: _reprogs,
+        prep: _prep,
       }),
     );
   } catch {
@@ -137,6 +166,7 @@ export function hydrate(): void {
       if (data.eventos && typeof data.eventos === "object") _eventos = data.eventos;
       if (Array.isArray(data.incidencias)) _incidencias = data.incidencias;
       if (data.reprogs && typeof data.reprogs === "object") _reprogs = data.reprogs;
+      if (data.prep) _prep = normalizePrep(data.prep);
       notify();
     }
   } catch {
@@ -160,6 +190,21 @@ export function getColumns(): Columns {
 
 export function getCamion1Ids(): string[] {
   return _columns.camion_1;
+}
+
+// ── Tablero de Preparación ────────────────────────────────────────────────
+export function getPreparacionColumns(): PrepColumns {
+  return _prep;
+}
+
+export function getPreparacionItem(id: string): PreparacionItem | undefined {
+  return PREP_INDEX.get(id);
+}
+
+export function setPreparacionColumns(next: PrepColumns): void {
+  _prep = next;
+  persist();
+  notify();
 }
 
 export function getColumnaDe(id: string): ArmadoColumnId {
@@ -222,17 +267,41 @@ export function getIncidenciasByPedido(id: string): Incidencia[] {
 
 // ── Mutaciones de pedidos ─────────────────────────────────────────────────────
 
-export function addPedido(p: Pedido): void {
+export function addPedido(p: Pedido, col: ArmadoColumnId = "sin_asignar"): void {
   _pedidos = [p, ..._pedidos];
-  _columns = { ..._columns, sin_asignar: [p.id, ..._columns.sin_asignar] };
+  const cleaned = removeEverywhere(_columns, p.id);
+  cleaned[col] = [p.id, ...cleaned[col]];
+  _columns = cleaned;
   const s = stamp();
   pushEvento(p.id, { tipo: "creado", titulo: "Pedido creado", fecha: s.fecha, hora: s.hora, autor: USUARIO_ACTUAL });
+  if (col !== "sin_asignar") {
+    const info = COLUMN_INFO[col];
+    pushEvento(p.id, {
+      tipo: "asignado",
+      titulo: `Asignado a ${info.label}`,
+      detalle: `${info.vehiculo} · ${info.chofer}`,
+      fecha: s.fecha,
+      hora: s.hora,
+      autor: USUARIO_ACTUAL,
+    });
+  }
   persist();
   notify();
 }
 
 export function updatePedido(id: string, patch: Partial<Pedido>): void {
   _pedidos = _pedidos.map((p) => (p.id === id ? { ...p, ...patch } : p));
+  persist();
+  notify();
+}
+
+export function cambiarPrioridad(id: string, prioridad: PrioridadPedido): void {
+  const prev = _pedidos.find((p) => p.id === id);
+  if (!prev || prev.prioridad === prioridad) return;
+  _pedidos = _pedidos.map((p) => (p.id === id ? { ...p, prioridad } : p));
+  const s = stamp();
+  const label = prioridad === "alta" ? "Alta" : prioridad === "media" ? "Media" : "Baja";
+  pushEvento(id, { tipo: "prioridad", titulo: `Prioridad cambiada a ${label}`, fecha: s.fecha, hora: s.hora, autor: USUARIO_ACTUAL });
   persist();
   notify();
 }

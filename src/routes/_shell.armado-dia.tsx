@@ -1,24 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
   closestCorners,
-  type DragStartEvent,
-  type DragOverEvent,
-  type DragEndEvent,
-  type UniqueIdentifier,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
-import { useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
   Save,
@@ -34,6 +26,9 @@ import {
   XCircle,
   ClipboardCheck,
   Smartphone,
+  MoreVertical,
+  Eye,
+  Flag,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -41,15 +36,31 @@ import {
   CONFIRMACION_LABEL,
   type ArmadoColumnId,
   type Pedido,
+  type PrioridadPedido,
   type ConfirmacionCliente,
 } from "@/lib/demo-data";
 import {
   getPedidos,
   getColumns,
   setColumns as setStoreColumns,
-  subscribe,
-  hydrate,
+  cambiarVehiculo,
+  cambiarChofer,
+  cambiarPrioridad,
+  COLUMN_INFO,
+  COLUMNAS_ASIGNABLES,
 } from "@/lib/store";
+import { useDndBoard } from "@/lib/use-board";
+import { PedidoDetalle } from "@/components/pedido-detalle";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_shell/armado-dia")({
   component: ArmadoDiaPage,
@@ -141,11 +152,11 @@ const PRIORIDAD_TONE: Record<string, string> = {
 function PedidoCard({
   pedido,
   isDragging = false,
-  dragHandle,
+  menu,
 }: {
   pedido: Pedido;
   isDragging?: boolean;
-  dragHandle?: React.HTMLAttributes<HTMLDivElement>;
+  menu?: React.ReactNode;
 }) {
   return (
     <div
@@ -175,16 +186,17 @@ function PedidoCard({
       {/* Fila superior: ID + prioridad */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          {dragHandle && (
-            <div {...dragHandle} className="cursor-grab text-muted-foreground/40 hover:text-muted-foreground">
-              <GripVertical className="h-3.5 w-3.5" />
-            </div>
-          )}
+          <div className="cursor-grab text-muted-foreground/40">
+            <GripVertical className="h-3.5 w-3.5" />
+          </div>
           <span className="font-mono text-[11px] font-medium text-muted-foreground">{pedido.id}</span>
         </div>
-        <span className={"rounded px-1.5 py-0.5 text-[10px] font-semibold " + PRIORIDAD_TONE[pedido.prioridad]}>
-          {pedido.prioridad === "alta" ? "Alta" : pedido.prioridad === "media" ? "Media" : "Baja"}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className={"rounded px-1.5 py-0.5 text-[10px] font-semibold " + PRIORIDAD_TONE[pedido.prioridad]}>
+            {pedido.prioridad === "alta" ? "Alta" : pedido.prioridad === "media" ? "Media" : "Baja"}
+          </span>
+          {menu}
+        </div>
       </div>
 
       {/* Cliente */}
@@ -213,7 +225,7 @@ function PedidoCard({
 
 // ── Item arrastrable ───────────────────────────────────────────────────────
 
-function SortableCard({ id }: { id: string }) {
+function SortableCard({ id, onOpenDetalle }: { id: string; onOpenDetalle: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id });
 
@@ -224,19 +236,100 @@ function SortableCard({ id }: { id: string }) {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={isDragging ? "opacity-40" : ""}
+      className={"cursor-grab active:cursor-grabbing " + (isDragging ? "opacity-40" : "")}
+      {...attributes}
+      {...listeners}
     >
-      <PedidoCard
-        pedido={pedido}
-        dragHandle={{ ...attributes, ...listeners }}
-      />
+      <PedidoCard pedido={pedido} menu={<CardActionsMenu pedido={pedido} onOpenDetalle={onOpenDetalle} />} />
     </div>
+  );
+}
+
+// Menú de acciones de la card: reutiliza las mutaciones del store. El botón
+// detiene el pointer down para no iniciar un drag al abrir el menú.
+function CardActionsMenu({ pedido, onOpenDetalle }: { pedido: Pedido; onOpenDetalle: (id: string) => void }) {
+  const asignables = COLUMNAS_ASIGNABLES;
+  const prioridades: PrioridadPedido[] = ["alta", "media", "baja"];
+  const prioLabel: Record<PrioridadPedido, string> = { alta: "Alta", media: "Media", baja: "Baja" };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/60 hover:bg-muted hover:text-foreground"
+          aria-label="Acciones del pedido"
+        >
+          <MoreVertical className="h-3.5 w-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onSelect={() => onOpenDetalle(pedido.id)}>
+          <Eye className="h-4 w-4" /> Abrir detalle
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Truck className="h-4 w-4" /> Cambiar vehículo
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {asignables.map((c) => (
+              <DropdownMenuItem
+                key={c}
+                onSelect={() => {
+                  cambiarVehiculo(pedido.id, c);
+                  toast.success("Vehículo reasignado", { description: `${pedido.id} → ${COLUMN_INFO[c].label}` });
+                }}
+              >
+                {COLUMN_INFO[c].vehiculo}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <User className="h-4 w-4" /> Cambiar chofer
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {asignables.map((c) => (
+              <DropdownMenuItem
+                key={c}
+                onSelect={() => {
+                  cambiarChofer(pedido.id, c);
+                  toast.success("Chofer reasignado", { description: `${pedido.id} → ${COLUMN_INFO[c].chofer}` });
+                }}
+              >
+                {COLUMN_INFO[c].chofer}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Flag className="h-4 w-4" /> Cambiar prioridad
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {prioridades.map((p) => (
+              <DropdownMenuItem
+                key={p}
+                onSelect={() => {
+                  cambiarPrioridad(pedido.id, p);
+                  toast.success(`Prioridad: ${prioLabel[p]}`, { description: pedido.id });
+                }}
+              >
+                {prioLabel[p]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
 // ── Columna sin asignar ─────────────────────────────────────────────────────
 
-function UnassignedColumn({ ids }: { ids: string[] }) {
+function UnassignedColumn({ ids, onOpenDetalle }: { ids: string[]; onOpenDetalle: (id: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: "sin_asignar" });
 
   return (
@@ -269,7 +362,7 @@ function UnassignedColumn({ ids }: { ids: string[] }) {
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {ids.map((id) => (
-              <SortableCard key={id} id={id} />
+              <SortableCard key={id} id={id} onOpenDetalle={onOpenDetalle} />
             ))}
             {ids.length === 0 && (
               <div className="flex h-20 items-center justify-center text-xs text-muted-foreground">
@@ -285,7 +378,7 @@ function UnassignedColumn({ ids }: { ids: string[] }) {
 
 // ── Columna de vehículo ───────────────────────────────────────────────────
 
-function TruckColumn({ columnId, ids }: { columnId: Exclude<ColumnId, "sin_asignar">; ids: string[] }) {
+function TruckColumn({ columnId, ids, onOpenDetalle }: { columnId: Exclude<ColumnId, "sin_asignar">; ids: string[]; onOpenDetalle: (id: string) => void }) {
   const config = VEHICLE_CONFIGS[columnId];
   const { setNodeRef, isOver } = useDroppable({ id: columnId });
   const pct = Math.round((ids.length / config.maxPedidos) * 100);
@@ -388,7 +481,7 @@ function TruckColumn({ columnId, ids }: { columnId: Exclude<ColumnId, "sin_asign
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {ids.map((id) => (
-              <SortableCard key={id} id={id} />
+              <SortableCard key={id} id={id} onOpenDetalle={onOpenDetalle} />
             ))}
             {ids.length === 0 && (
               <div className="flex h-20 flex-col items-center justify-center gap-1 text-xs text-muted-foreground">
@@ -406,98 +499,14 @@ function TruckColumn({ columnId, ids }: { columnId: Exclude<ColumnId, "sin_asign
 // ── Página principal ──────────────────────────────────────────────────────
 
 function ArmadoDiaPage() {
-  const [columns, setColumns] = useState<Record<ColumnId, string[]>>(getColumns);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // Toda la mecánica de drag & drop vive en el hook compartido useDndBoard,
+  // que también persiste al store (única fuente de verdad).
+  const { columns, activeId, sensors, onDragStart, onDragOver, onDragEnd } =
+    useDndBoard<ColumnId>({ read: getColumns, persist: setStoreColumns });
 
-  // Mantener una referencia viva de si estamos arrastrando, para que la
-  // suscripción al store no pise el estado en medio de un drag.
-  const activeIdRef = useRef<string | null>(null);
-  activeIdRef.current = activeId;
-
-  // Hidratar desde localStorage y sincronizar con el store compartido.
-  useEffect(() => {
-    hydrate();
-    const unsub = subscribe(() => {
-      if (activeIdRef.current === null) setColumns(getColumns());
-    });
-    return unsub;
-  }, []);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
-
-  function findContainer(id: UniqueIdentifier): ColumnId | undefined {
-    if (id in columns) return id as ColumnId;
-    return (Object.keys(columns) as ColumnId[]).find((key) =>
-      columns[key].includes(id as string)
-    );
-  }
-
-  // ── Drag handlers ─────────────────────────────────────────────────────
-
-  function onDragStart({ active }: DragStartEvent) {
-    setActiveId(active.id as string);
-  }
-
-  function onDragOver({ active, over }: DragOverEvent) {
-    if (!over) return;
-
-    const activeContainer = findContainer(active.id);
-    const overContainer =
-      findContainer(over.id) ??
-      (over.id in columns ? (over.id as ColumnId) : undefined);
-
-    if (!activeContainer || !overContainer || activeContainer === overContainer) return;
-
-    setColumns((prev) => {
-      const activeItems = prev[activeContainer].filter((id) => id !== active.id);
-      const overItems = [...prev[overContainer]];
-      const overIdx = overItems.indexOf(over.id as string);
-      const newIdx = overIdx >= 0 ? overIdx : overItems.length;
-
-      return {
-        ...prev,
-        [activeContainer]: activeItems,
-        [overContainer]: [
-          ...overItems.slice(0, newIdx),
-          active.id as string,
-          ...overItems.slice(newIdx),
-        ],
-      };
-    });
-  }
-
-  function onDragEnd({ active, over }: DragEndEvent) {
-    setActiveId(null);
-
-    // Reordenamiento dentro de la misma columna (los movimientos entre
-    // columnas ya se aplicaron en onDragOver). Calculamos el resultado final
-    // y lo confirmamos al store compartido para persistirlo.
-    let next = columns;
-    if (over) {
-      const activeContainer = findContainer(active.id);
-      const overContainer =
-        findContainer(over.id) ??
-        (over.id in columns ? (over.id as ColumnId) : undefined);
-
-      if (activeContainer && overContainer && activeContainer === overContainer) {
-        const activeIdx = columns[activeContainer].indexOf(active.id as string);
-        const overIdx = columns[overContainer].indexOf(over.id as string);
-        if (activeIdx !== overIdx && overIdx >= 0) {
-          next = {
-            ...columns,
-            [activeContainer]: arrayMove(columns[activeContainer], activeIdx, overIdx),
-          };
-        }
-      }
-    }
-
-    setColumns(next);
-    setStoreColumns(next); // persiste + notifica al resto de las pantallas
-  }
+  // Pedido abierto en el panel de detalle.
+  const [detalleId, setDetalleId] = useState<string | null>(null);
+  const detallePedido = detalleId ? getPedido(detalleId) ?? null : null;
 
   // ── Métricas ──────────────────────────────────────────────────────────
 
@@ -594,14 +603,14 @@ function ArmadoDiaPage() {
         onDragEnd={onDragEnd}
       >
         <div className="flex gap-4 overflow-x-auto pb-4">
-          <UnassignedColumn ids={columns.sin_asignar} />
+          <UnassignedColumn ids={columns.sin_asignar} onOpenDetalle={setDetalleId} />
 
           {/* Separador visual */}
           <div className="shrink-0 self-stretch border-l border-border" />
 
-          <TruckColumn columnId="camion_1"    ids={columns.camion_1} />
-          <TruckColumn columnId="camion_2"    ids={columns.camion_2} />
-          <TruckColumn columnId="flete_externo" ids={columns.flete_externo} />
+          <TruckColumn columnId="camion_1"    ids={columns.camion_1} onOpenDetalle={setDetalleId} />
+          <TruckColumn columnId="camion_2"    ids={columns.camion_2} onOpenDetalle={setDetalleId} />
+          <TruckColumn columnId="flete_externo" ids={columns.flete_externo} onOpenDetalle={setDetalleId} />
         </div>
 
         <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
@@ -624,6 +633,13 @@ function ArmadoDiaPage() {
         </span>
         <span className="ml-auto hidden sm:block">Arrastrá las tarjetas para reasignar pedidos entre vehículos</span>
       </div>
+
+      {/* Panel de detalle del pedido (reutiliza el componente compartido) */}
+      <PedidoDetalle
+        pedido={detallePedido}
+        open={detalleId !== null}
+        onOpenChange={(v) => { if (!v) setDetalleId(null); }}
+      />
     </div>
   );
 }
