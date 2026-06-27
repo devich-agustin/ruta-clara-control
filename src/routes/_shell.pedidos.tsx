@@ -103,7 +103,10 @@ function PedidosPage() {
               ))}
             </div>
 
-            <button className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted">
+            <button
+              onClick={() => toast.info("Filtro por fecha", { description: "El filtro por rango de fechas se habilitará con el backend conectado." })}
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted"
+            >
               <Filter className="h-4 w-4" /><span className="hidden sm:inline">Fecha:</span> Hoy <ChevronDown className="h-3.5 w-3.5" />
             </button>
           </div>

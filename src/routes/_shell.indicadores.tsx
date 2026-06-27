@@ -25,13 +25,12 @@ import {
   BarChart2,
 } from "lucide-react";
 import {
-  PEDIDOS,
-  RESUMEN,
   MOTIVOS_FALLOS,
   ZONAS_ENTREGAS,
   RENDIMIENTO_VEHICULO,
   SEMANA,
 } from "@/lib/demo-data";
+import { usePedidos } from "@/lib/use-pedidos";
 
 export const Route = createFileRoute("/_shell/indicadores")({
   component: IndicadoresPage,
@@ -47,7 +46,8 @@ const C = {
   mutedBg:     "#f1f5f9",
 };
 
-// ── Métricas calculadas ───────────────────────────────────────────────────
+// ── Métricas DEMO (agregados de 30 días — sin fuente en el store todavía) ──
+// Requieren historial persistido de entregas; se mantienen como datos demo.
 
 const totalRealizadas  = 1184;
 const totalFallos      = 47;
@@ -56,12 +56,6 @@ const totalIntentos    = totalRealizadas + totalFallos;
 const tasaExito        = ((totalRealizadas / totalIntentos) * 100).toFixed(1);
 const tasaFallo        = ((totalFallos / totalIntentos) * 100).toFixed(1);
 const tasaReprog       = ((totalReprog / totalIntentos) * 100).toFixed(1);
-
-// Confirmaciones de hoy (22/06)
-const pedidosHoy       = PEDIDOS.filter((p) => p.fecha === "22/06/2026");
-const confirmadosHoy   = pedidosHoy.filter((p) => p.confirmacion === "confirmado").length;
-const noConf           = pedidosHoy.filter((p) => p.confirmacion !== "confirmado").length;
-const pctNoConf        = Math.round((noConf / pedidosHoy.length) * 100);
 
 // Viajes evitados (calculado demo)
 // Sin sistema de confirmación, el sector promedia ~14% de clientes ausentes.
@@ -77,22 +71,7 @@ const paradasPromedioCamion = 4;
 const tiempoTotalRuta =
   paradasPromedioCamion * (tiempoPromedioParada + tiempoTrasitoParada); // 100 min
 
-// ── Datos para gráficos ───────────────────────────────────────────────────
-
-const PIE_HOY = [
-  { name: "Entregados",    value: RESUMEN.entregados,    color: C.success },
-  { name: "En ruta",       value: 12,                    color: C.primary },
-  { name: "Pendientes",    value: RESUMEN.pendientes,    color: C.warning },
-  { name: "Reprogramados", value: RESUMEN.reprogramados, color: C.destructive },
-];
-
-const CONF_HOY = [
-  { label: "Confirmados",  value: confirmadosHoy, color: C.success,     pct: Math.round((confirmadosHoy / pedidosHoy.length) * 100) },
-  { label: "Pendientes",   value: pedidosHoy.filter((p) => p.confirmacion === "pendiente").length, color: C.warning, pct: 0 },
-  { label: "No responden", value: pedidosHoy.filter((p) => p.confirmacion === "no_responde").length, color: C.destructive, pct: 0 },
-];
-CONF_HOY[1].pct = Math.round((CONF_HOY[1].value / pedidosHoy.length) * 100);
-CONF_HOY[2].pct = Math.round((CONF_HOY[2].value / pedidosHoy.length) * 100);
+// ── Datos para gráficos (demo: zonas y semana son agregados históricos) ───
 
 const ZONA_DATA = ZONAS_ENTREGAS.map((z) => ({
   zona:     z.zona,
@@ -226,6 +205,32 @@ function CustomTooltip({
 // ── Página ────────────────────────────────────────────────────────────────
 
 function IndicadoresPage() {
+  // ── Métricas EN VIVO derivadas del store ──────────────────────────────────
+  const pedidos = usePedidos();
+
+  const totalActivos = pedidos.length;
+
+  // Confirmaciones de hoy (22/06) — incluye pedidos creados con fecha de hoy
+  const pedidosHoy     = pedidos.filter((p) => p.fecha === "22/06/2026");
+  const denomHoy       = pedidosHoy.length || 1; // evita división por cero
+  const confirmadosHoy = pedidosHoy.filter((p) => p.confirmacion === "confirmado").length;
+  const noConf         = pedidosHoy.filter((p) => p.confirmacion !== "confirmado").length;
+  const pctNoConf      = Math.round((noConf / denomHoy) * 100);
+
+  // Distribución por estado — recalculada desde el store
+  const PIE_HOY = [
+    { name: "Entregados",    value: pedidos.filter((p) => p.estado === "entregado").length,    color: C.success },
+    { name: "En ruta",       value: pedidos.filter((p) => p.estado === "en_ruta").length,      color: C.primary },
+    { name: "Pendientes",    value: pedidos.filter((p) => p.estado === "pendiente").length,     color: C.warning },
+    { name: "Reprogramados", value: pedidos.filter((p) => p.estado === "reprogramado").length,  color: C.destructive },
+  ];
+
+  const CONF_HOY = [
+    { label: "Confirmados",  value: confirmadosHoy, color: C.success },
+    { label: "Pendientes",   value: pedidosHoy.filter((p) => p.confirmacion === "pendiente").length,   color: C.warning },
+    { label: "No responden", value: pedidosHoy.filter((p) => p.confirmacion === "no_responde").length, color: C.destructive },
+  ].map((c) => ({ ...c, pct: Math.round((c.value / denomHoy) * 100) }));
+
   return (
     <div className="space-y-8">
 
@@ -302,7 +307,7 @@ function IndicadoresPage() {
         <div className="rounded-lg border border-border bg-card p-6 lg:col-span-2">
           <SectionTitle>Distribución de entregas — Hoy</SectionTitle>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {RESUMEN.hoy} pedidos activos · Lunes 22 de junio
+            {totalActivos} pedidos activos · Lunes 22 de junio
           </p>
           <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row">
             <div className="w-full sm:w-1/2" style={{ height: 220 }}>

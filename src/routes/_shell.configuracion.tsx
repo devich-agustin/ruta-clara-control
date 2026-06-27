@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Building2, Bell, CreditCard, Users, Shield, Plug } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_shell/configuracion")({
   component: ConfiguracionPage,
@@ -28,6 +29,7 @@ function ConfiguracionPage() {
           return (
             <button
               key={s.title}
+              onClick={() => toast.info(s.title, { description: `La configuración de "${s.title}" se habilitará con el backend y la gestión de cuenta conectados.` })}
               className="group flex items-start gap-4 rounded-lg border border-border bg-card p-5 text-left hover:border-primary/40"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">

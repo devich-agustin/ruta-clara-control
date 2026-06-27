@@ -48,6 +48,8 @@ export interface Pedido {
   confirmacion: ConfirmacionCliente;
   prioridad: PrioridadPedido;
   direccionValidada?: boolean;
+  email?: string;
+  observaciones?: string;
 }
 
 export const PEDIDOS: Pedido[] = [

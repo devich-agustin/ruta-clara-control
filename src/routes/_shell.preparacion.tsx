@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { PREPARACION, PREPARACION_LABEL, type EstadoPreparacion } from "@/lib/demo-data";
 import { Package, Clock, CheckCircle2, Truck, Plus } from "lucide-react";
 
@@ -23,7 +24,10 @@ function PreparacionPage() {
             Depósito Barracas · {PREPARACION.length} pedidos en proceso
           </p>
         </div>
-        <button className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted">
+        <button
+          onClick={() => toast.info("Mover pedido manualmente", { description: "El tablero de preparación será editable (arrastrar entre estados) con el backend de depósito conectado." })}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-card px-3 text-sm font-medium hover:bg-muted"
+        >
           <Plus className="h-4 w-4" /> Mover pedido manualmente
         </button>
       </div>

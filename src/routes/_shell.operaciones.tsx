@@ -10,21 +10,33 @@ import {
   ArrowUpRight,
   CheckCircle2,
 } from "lucide-react";
-import { CAMIONES, INCIDENCIAS, VEHICULOS, PEDIDOS } from "@/lib/demo-data";
+import { CAMIONES, VEHICULOS } from "@/lib/demo-data";
 import { MessageCircle } from "lucide-react";
 import { EstadoBadge } from "@/components/estado-badge";
+import { usePedidos, useIncidencias } from "@/lib/use-pedidos";
 
 export const Route = createFileRoute("/_shell/operaciones")({
   component: OperacionesPage,
 });
 
 function OperacionesPage() {
-  const camionesActivos = VEHICULOS.filter((v) => v.estado === "En ruta").length;
-  const enTaller = VEHICULOS.filter((v) => v.estado === "En taller").length;
-  const incidenciasAbiertas = INCIDENCIAS.filter((i) => i.estado !== "resuelta");
-  const sinConfirmar = PEDIDOS.filter(
+  // ── Pedidos en vivo desde el store ────────────────────────────────────────
+  const pedidos = usePedidos();
+  const totalPedidos  = pedidos.length;
+  const entregados    = pedidos.filter((p) => p.estado === "entregado").length;
+  const enRuta        = pedidos.filter((p) => p.estado === "en_ruta").length;
+  const pendientes    = pedidos.filter((p) => p.estado === "pendiente").length;
+  const reprogramados = pedidos.filter((p) => p.estado === "reprogramado").length;
+  const sinConfirmar = pedidos.filter(
     (p) => p.fecha === "22/06/2026" && p.estado !== "entregado" && p.confirmacion !== "confirmado"
   );
+
+  // Incidencias en vivo desde el store (incluye las creadas en la sesión).
+  const incidenciasAbiertas = useIncidencias().filter((i) => i.estado !== "resuelta");
+
+  // Flota: aún no vive en el store → datos demo.
+  const camionesActivos = VEHICULOS.filter((v) => v.estado === "En ruta").length;
+  const enTaller = VEHICULOS.filter((v) => v.estado === "En taller").length;
 
   return (
     <div className="space-y-6">
@@ -43,12 +55,12 @@ function OperacionesPage() {
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <Kpi icon={Package}      label="Entregas del día"   value="42" tone="text-foreground" />
-        <Kpi icon={CheckCircle2} label="Entregadas"         value="28" tone="text-success" />
-        <Kpi icon={Truck}        label="En curso"           value="6"  tone="text-primary" />
-        <Kpi icon={Clock}        label="Pendientes"         value="10" tone="text-warning" />
-        <Kpi icon={RefreshCcw}   label="Reprogramaciones"   value="4"  tone="text-destructive" />
-        <Kpi icon={Wrench}       label="Vehículos en taller"value={String(enTaller)} tone="text-destructive" />
+        <Kpi icon={Package}      label="Entregas del día"   value={String(totalPedidos)}  tone="text-foreground" />
+        <Kpi icon={CheckCircle2} label="Entregadas"         value={String(entregados)}    tone="text-success" />
+        <Kpi icon={Truck}        label="En curso"           value={String(enRuta)}        tone="text-primary" />
+        <Kpi icon={Clock}        label="Pendientes"         value={String(pendientes)}    tone="text-warning" />
+        <Kpi icon={RefreshCcw}   label="Reprogramaciones"   value={String(reprogramados)} tone="text-destructive" />
+        <Kpi icon={Wrench}       label="Vehículos en taller"value={String(enTaller)}      tone="text-destructive" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

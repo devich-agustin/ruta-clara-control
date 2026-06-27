@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -43,7 +43,13 @@ import {
   type Pedido,
   type ConfirmacionCliente,
 } from "@/lib/demo-data";
-import { getPedidos, getArmadoInicial } from "@/lib/store";
+import {
+  getPedidos,
+  getColumns,
+  setColumns as setStoreColumns,
+  subscribe,
+  hydrate,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/_shell/armado-dia")({
   component: ArmadoDiaPage,
@@ -400,8 +406,22 @@ function TruckColumn({ columnId, ids }: { columnId: Exclude<ColumnId, "sin_asign
 // ── Página principal ──────────────────────────────────────────────────────
 
 function ArmadoDiaPage() {
-  const [columns, setColumns] = useState<Record<ColumnId, string[]>>(getArmadoInicial);
+  const [columns, setColumns] = useState<Record<ColumnId, string[]>>(getColumns);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Mantener una referencia viva de si estamos arrastrando, para que la
+  // suscripción al store no pise el estado en medio de un drag.
+  const activeIdRef = useRef<string | null>(null);
+  activeIdRef.current = activeId;
+
+  // Hidratar desde localStorage y sincronizar con el store compartido.
+  useEffect(() => {
+    hydrate();
+    const unsub = subscribe(() => {
+      if (activeIdRef.current === null) setColumns(getColumns());
+    });
+    return unsub;
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -452,24 +472,31 @@ function ArmadoDiaPage() {
 
   function onDragEnd({ active, over }: DragEndEvent) {
     setActiveId(null);
-    if (!over) return;
 
-    const activeContainer = findContainer(active.id);
-    const overContainer =
-      findContainer(over.id) ??
-      (over.id in columns ? (over.id as ColumnId) : undefined);
+    // Reordenamiento dentro de la misma columna (los movimientos entre
+    // columnas ya se aplicaron en onDragOver). Calculamos el resultado final
+    // y lo confirmamos al store compartido para persistirlo.
+    let next = columns;
+    if (over) {
+      const activeContainer = findContainer(active.id);
+      const overContainer =
+        findContainer(over.id) ??
+        (over.id in columns ? (over.id as ColumnId) : undefined);
 
-    if (!activeContainer || !overContainer || activeContainer !== overContainer) return;
-
-    const activeIdx = columns[activeContainer].indexOf(active.id as string);
-    const overIdx = columns[overContainer].indexOf(over.id as string);
-
-    if (activeIdx !== overIdx && overIdx >= 0) {
-      setColumns((prev) => ({
-        ...prev,
-        [activeContainer]: arrayMove(prev[activeContainer], activeIdx, overIdx),
-      }));
+      if (activeContainer && overContainer && activeContainer === overContainer) {
+        const activeIdx = columns[activeContainer].indexOf(active.id as string);
+        const overIdx = columns[overContainer].indexOf(over.id as string);
+        if (activeIdx !== overIdx && overIdx >= 0) {
+          next = {
+            ...columns,
+            [activeContainer]: arrayMove(columns[activeContainer], activeIdx, overIdx),
+          };
+        }
+      }
     }
+
+    setColumns(next);
+    setStoreColumns(next); // persiste + notifica al resto de las pantallas
   }
 
   // ── Métricas ──────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus, Phone, IdCard } from "lucide-react";
+import { toast } from "sonner";
 import { CHOFERES } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/_shell/choferes")({
@@ -14,7 +15,10 @@ function ChoferesPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Choferes</h1>
           <p className="mt-1 text-sm text-muted-foreground">{CHOFERES.length} choferes registrados · 3 activos hoy</p>
         </div>
-        <button className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+        <button
+          onClick={() => toast.info("Nuevo chofer", { description: "El alta de choferes se habilitará con el backend de equipo conectado." })}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
           <Plus className="h-4 w-4" /> Nuevo chofer
         </button>
       </div>

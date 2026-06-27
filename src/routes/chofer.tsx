@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Phone,
   MapPin,
@@ -17,13 +17,21 @@ import {
   ChevronRight,
 } from "lucide-react";
 import {
-  PEDIDOS,
-  ARMADO_DIA_INICIAL,
   getDetalle,
   getConfirmacion,
   CONFIRMACION_LABEL,
   type ConfirmacionCliente,
 } from "@/lib/demo-data";
+import {
+  getCamion1Ids,
+  getPedidos,
+  subscribe,
+  hydrate,
+  marcarEntregado,
+  crearIncidencia,
+  COLUMN_INFO,
+} from "@/lib/store";
+import type { TipoIncidencia } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/chofer")({
   component: ChoferMobile,
@@ -48,9 +56,9 @@ interface Entrega {
 // ── Datos del Camión 1 desde el estado compartido ─────────────────────────
 
 function buildEntregas(): Entrega[] {
-  return ARMADO_DIA_INICIAL.camion_1
+  return getCamion1Ids()
     .map((id): Entrega | null => {
-      const pedido = PEDIDOS.find((p) => p.id === id);
+      const pedido = getPedidos().find((p) => p.id === id);
       if (!pedido) return null;
       const detalle = getDetalle(id);
       const conf = getConfirmacion(id);
@@ -104,9 +112,55 @@ function ChoferMobile() {
   const [entregas, setEntregas] = useState<Entrega[]>(buildEntregas);
   const [motivoFor, setMotivoFor] = useState<string | null>(null);
 
+  // Hidratar desde localStorage y reaccionar a cambios del store (p. ej.
+  // nuevas asignaciones hechas en Armado del Día), conservando lo que el
+  // chofer ya marcó como entregado / no entregado.
+  useEffect(() => {
+    hydrate();
+    const unsub = subscribe(() => {
+      setEntregas((prev) => {
+        const prevById = new Map(prev.map((e) => [e.id, e]));
+        return buildEntregas().map((e) => {
+          const anterior = prevById.get(e.id);
+          return anterior
+            ? { ...e, estado: anterior.estado, motivo: anterior.motivo }
+            : e;
+        });
+      });
+    });
+    return unsub;
+  }, []);
+
   function marcar(id: string, estado: "entregado" | "no_entregado", motivo?: string) {
     setEntregas((prev) => prev.map((e) => (e.id === id ? { ...e, estado, motivo } : e)));
     setMotivoFor(null);
+
+    // Escribir el resultado al store compartido para que se refleje en
+    // Pedidos, Detalle, Dashboard, Indicadores e Incidencias.
+    if (estado === "entregado") {
+      marcarEntregado(id, COLUMN_INFO.camion_1.chofer);
+    } else {
+      const pedido = getPedidos().find((p) => p.id === id);
+      const tipo: TipoIncidencia =
+        motivo === "Cliente ausente"
+          ? "cliente_ausente"
+          : motivo === "Dirección incorrecta"
+            ? "chofer"
+            : motivo === "Reprogramó"
+              ? "reprogramacion"
+              : "demora";
+      crearIncidencia({
+        tipo,
+        titulo: `${pedido?.cliente ?? id} — ${motivo ?? "Entrega fallida"}`,
+        detalle: `${COLUMN_INFO.camion_1.chofer} reportó "${motivo ?? "entrega fallida"}" al intentar entregar ${pedido?.producto ?? ""} a ${pedido?.cliente ?? id} (${id}).`,
+        prioridad: "alta",
+        pedidoId: id,
+        cliente: pedido?.cliente,
+        clienteTelefono: pedido?.telefono,
+        chofer: COLUMN_INFO.camion_1.chofer,
+        vehiculo: COLUMN_INFO.camion_1.vehiculo,
+      });
+    }
   }
 
   const completadas = entregas.filter((e) => e.estado !== "pendiente").length;

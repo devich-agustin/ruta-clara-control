@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { type Pedido } from "@/lib/demo-data";
-import { addPedido } from "@/lib/store";
+import { addPedido, getPedidos } from "@/lib/store";
 
 export const Route = createFileRoute("/_shell/nuevo-pedido")({
   component: NuevoPedidoPage,
@@ -18,9 +18,14 @@ export const Route = createFileRoute("/_shell/nuevo-pedido")({
 
 // ── ID generator ────────────────────────────────────────────────────────────
 
-let _nextId = 1058;
+// Deriva el próximo ID del máximo existente en el store, para no colisionar
+// con pedidos restaurados desde localStorage tras una recarga.
 function genId(): string {
-  return `MUE-${_nextId++}`;
+  const nums = getPedidos()
+    .map((p) => Number(p.id.replace("MUE-", "")))
+    .filter((n) => Number.isFinite(n));
+  const next = (nums.length ? Math.max(...nums) : 1057) + 1;
+  return `MUE-${next}`;
 }
 
 // ── Dirección — autocompletado demo ────────────────────────────────────────
@@ -229,6 +234,8 @@ function NuevoPedidoPage() {
       confirmacion:      "pendiente",
       prioridad:         "media",
       direccionValidada: addressValidation === "validated",
+      email:             form.email.trim() || undefined,
+      observaciones:     form.observaciones.trim() || undefined,
     };
 
     addPedido(nuevoPedido);

@@ -1,5 +1,6 @@
 import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Package,
@@ -219,6 +220,7 @@ function ShellLayout() {
           {/* Right actions */}
           <div className="ml-auto flex items-center gap-2">
             <button
+              onClick={() => toast.info("Notificaciones", { description: "El centro de notificaciones en tiempo real llegará con el backend conectado." })}
               className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
               aria-label="Notificaciones"
             >

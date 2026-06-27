@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import {
-  INCIDENCIAS,
   INCIDENCIA_LABEL,
   type TipoIncidencia,
-  type Incidencia,
   type TipoEventoInc,
 } from "@/lib/demo-data";
+import { useIncidencias } from "@/lib/use-pedidos";
+import { updateIncidencia } from "@/lib/store";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   UserX,
@@ -165,7 +165,7 @@ function EstadoTimeline({ estado }: { estado: "abierta" | "en_revision" | "resue
 // ── Componente principal ────────────────────────────────────────────────────
 
 function IncidenciasPage() {
-  const [incidencias, setIncidencias] = useState<Incidencia[]>(INCIDENCIAS);
+  const incidencias = useIncidencias();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Filtros
@@ -197,16 +197,12 @@ function IncidenciasPage() {
   const impactoTotal  = useMemo(() => incidencias.filter((i) => i.estado !== "resuelta").reduce((s, i) => s + i.costoEstimado, 0), [incidencias]);
 
   function marcarResuelta(id: string) {
-    setIncidencias((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, estado: "resuelta" as const } : i)),
-    );
+    updateIncidencia(id, { estado: "resuelta" });
     toast.success("Incidencia marcada como resuelta");
   }
 
   function marcarEnRevision(id: string) {
-    setIncidencias((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, estado: "en_revision" as const } : i)),
-    );
+    updateIncidencia(id, { estado: "en_revision" });
     toast.success("Incidencia en revisión");
   }
 

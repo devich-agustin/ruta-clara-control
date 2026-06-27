@@ -11,26 +11,15 @@ import {
   PackageSearch,
 } from "lucide-react";
 import { EstadoBadge } from "@/components/estado-badge";
-import { PEDIDOS, RESUMEN } from "@/lib/demo-data";
+import { usePedidos } from "@/lib/use-pedidos";
+import { getColumns } from "@/lib/store";
 
 export const Route = createFileRoute("/_shell/")({
   component: Dashboard,
 });
 
-const STATS = [
-  { label: "Pedidos hoy",   value: RESUMEN.hoy,           icon: Package,     tone: "text-foreground",   sub: "+6 vs. ayer" },
-  { label: "Entregados",    value: RESUMEN.entregados,    icon: CheckCircle2,tone: "text-success",      sub: "67% del día" },
-  { label: "Pendientes",    value: RESUMEN.pendientes,    icon: Clock,       tone: "text-warning",      sub: "En 3 camiones" },
-  { label: "Reprogramados", value: RESUMEN.reprogramados, icon: RefreshCcw,  tone: "text-destructive",  sub: "Revisar motivos" },
-];
-
-const BARRAS = [
-  { label: "Entregado",    valor: 28, color: "bg-success" },
-  { label: "En ruta",      valor: 12, color: "bg-primary" },
-  { label: "Pendiente",    valor: 10, color: "bg-warning" },
-  { label: "Reprogramado", valor: 4,  color: "bg-destructive" },
-];
-
+// Alertas y actividad reciente: feed de eventos sin fuente en el store todavía.
+// Se mantienen como datos demo hasta tener historial de eventos persistido.
 const ALERTAS = [
   { icon: CalendarClock, text: "Lucía Fernández reprogramó la entrega de MUE-1046 para mañana 10:00.", tone: "warning" as const, time: "hace 8 min" },
   { icon: PackageSearch, text: "Pedido MUE-1049 sin chofer asignado para mañana.",                      tone: "primary" as const, time: "hace 22 min" },
@@ -45,11 +34,37 @@ const TONE: Record<"warning" | "primary" | "destructive", string> = {
 };
 
 function Dashboard() {
-  const proximas = PEDIDOS.filter((p) => p.estado === "pendiente" || p.estado === "en_ruta").slice(0, 5);
-  const max = Math.max(...BARRAS.map((b) => b.valor));
+  // ── KPIs derivados del store (reactivos a pedidos creados y cambios) ──────
+  const pedidos = usePedidos();
+  const columns = getColumns(); // re-render garantizado: usePedidos se suscribe al mismo store
+
+  const total         = pedidos.length;
+  const entregados    = pedidos.filter((p) => p.estado === "entregado").length;
+  const enRuta        = pedidos.filter((p) => p.estado === "en_ruta").length;
+  const pendientes    = pedidos.filter((p) => p.estado === "pendiente").length;
+  const reprogramados = pedidos.filter((p) => p.estado === "reprogramado").length;
+  const sinAsignar    = columns.sin_asignar.length;
+  const pctEntregados = total > 0 ? Math.round((entregados / total) * 100) : 0;
+
+  const STATS = [
+    { label: "Pedidos hoy",   value: total,         icon: Package,      tone: "text-foreground",  sub: "+6 vs. ayer" }, // delta vs. ayer: demo (sin historial)
+    { label: "Entregados",    value: entregados,    icon: CheckCircle2, tone: "text-success",     sub: `${pctEntregados}% del total` },
+    { label: "Pendientes",    value: pendientes,    icon: Clock,        tone: "text-warning",     sub: `${sinAsignar} sin asignar` },
+    { label: "Reprogramados", value: reprogramados, icon: RefreshCcw,   tone: "text-destructive", sub: "Revisar motivos" },
+  ];
+
+  const BARRAS = [
+    { label: "Entregado",    valor: entregados,    color: "bg-success" },
+    { label: "En ruta",      valor: enRuta,        color: "bg-primary" },
+    { label: "Pendiente",    valor: pendientes,    color: "bg-warning" },
+    { label: "Reprogramado", valor: reprogramados, color: "bg-destructive" },
+  ];
+
+  const proximas = pedidos.filter((p) => p.estado === "pendiente" || p.estado === "en_ruta").slice(0, 5);
+  const max = Math.max(...BARRAS.map((b) => b.valor), 1);
 
   // Pedidos de hoy sin confirmar (pendiente o no_responde)
-  const sinConfirmarHoy = PEDIDOS.filter(
+  const sinConfirmarHoy = pedidos.filter(
     (p) =>
       p.fecha === "22/06/2026" &&
       (p.estado === "pendiente" || p.estado === "en_ruta") &&
@@ -143,7 +158,7 @@ function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold">Estados de entrega</h2>
-              <p className="text-sm text-muted-foreground">Distribución de los 54 pedidos activos</p>
+              <p className="text-sm text-muted-foreground">Distribución de los {total} pedidos activos</p>
             </div>
             <span className="text-xs text-muted-foreground">Hoy</span>
           </div>

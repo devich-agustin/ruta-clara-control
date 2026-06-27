@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { SEMANA } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/_shell/calendario")({
@@ -21,17 +22,26 @@ function CalendarioPage() {
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex items-center rounded-md border border-border bg-card">
-            <button className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground hover:bg-muted">
+            <button
+              onClick={() => toast.info("Navegación por mes", { description: "La vista multimes estará disponible con el calendario conectado al backend." })}
+              className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground hover:bg-muted"
+            >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span className="border-x border-border px-3 text-sm font-medium">Junio 2026</span>
-            <button className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground hover:bg-muted">
+            <button
+              onClick={() => toast.info("Navegación por mes", { description: "La vista multimes estará disponible con el calendario conectado al backend." })}
+              className="inline-flex h-9 w-9 items-center justify-center text-muted-foreground hover:bg-muted"
+            >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
-          <button className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+          <Link
+            to="/nuevo-pedido"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
             <Plus className="h-4 w-4" /> Agendar entrega
-          </button>
+          </Link>
         </div>
       </div>
 
